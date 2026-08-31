@@ -94,20 +94,7 @@ const StaffSidebar = ({ activeTab = 'dashboard', unreadCount = 0 }) => {
           </div>
         </div>
 
-        {/* SELF SERVICE SECTION */}
-        <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: '700', color: '#475569', letterSpacing: '0.08em', marginBottom: '0.4rem', paddingLeft: '0.75rem', textTransform: 'uppercase' }}>
-            SELF SERVICE
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            <SidebarLink icon={Clock} isActive={activeTab === 'attendance'} onClick={() => navigate('/dashboard#attendance')}>
-              Attendance
-            </SidebarLink>
-            <SidebarLink icon={CalendarDays} isActive={activeTab === 'leaves'} onClick={() => navigate('/dashboard#leaves')}>
-              Leave Requests
-            </SidebarLink>
-          </div>
-        </div>
+
 
         {/* COMMUNICATION SECTION */}
         <div>

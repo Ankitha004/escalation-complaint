@@ -25,6 +25,7 @@ export const AuthProvider = ({ children }) => {
       const response = await API.post('/auth/login', { employeeId, password });
       const userData = response.data;
       setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
       return { success: true, role: userData.role || 'Employee', user: userData };
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'Unable to connect to server. Please check backend.';

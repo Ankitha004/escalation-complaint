@@ -34,7 +34,7 @@ const PublicFooter = () => {
               <li><span className="footer-dot" /> Level 1: Staff Complaint Ticket</li>
               <li><span className="footer-dot" /> Level 2: Team Leader Resolution</li>
               <li><span className="footer-dot" /> Level 3: Manager SLA Re-assignment</li>
-              <li><span className="footer-dot" /> Level 4: HR Manager Audit</li>
+              <li><span className="footer-dot" /> Level 4: HR Audit</li>
             </ul>
           </div>
 

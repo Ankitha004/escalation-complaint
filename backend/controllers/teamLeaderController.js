@@ -5,16 +5,66 @@ const { createNotification } = require('../services/notificationService');
 
 // Helper: Check if TL is authorized for this complaint
 const isAuthorizedForTLComplaint = async (complaint, tlUser) => {
-  if (complaint.assignedTeamLeader && complaint.assignedTeamLeader.toString() === tlUser._id.toString()) return true;
-  if (complaint.teamLeader === tlUser.name || complaint.teamLeader === tlUser.employeeId || complaint.teamLeader === tlUser._id.toString()) return true;
+  if (!tlUser) return false;
+  if (['Super Admin', 'Manager', 'HR', 'Team Leader'].includes(tlUser.role)) return true;
+
+  const tlId = tlUser._id.toString();
+  const tlEmpId = (tlUser.employeeId || '').trim().toLowerCase();
+  const tlName = (tlUser.name || '').trim().toLowerCase();
+
+  // 1. Direct assignedTeamLeader matching (handling populated subdocument or raw ObjectId)
+  const assignedTlId = complaint.assignedTeamLeader?._id 
+    ? complaint.assignedTeamLeader._id.toString() 
+    : complaint.assignedTeamLeader?.toString();
+  if (assignedTlId && assignedTlId === tlId) return true;
+
+  // 2. Legacy / String teamLeader field on Complaint
+  if (complaint.teamLeader) {
+    const complaintTL = complaint.teamLeader.trim().toLowerCase();
+    if (complaintTL === tlName || (tlEmpId && complaintTL === tlEmpId) || complaintTL === tlId.toLowerCase()) {
+      return true;
+    }
+  }
+
+  // 3. Department matching
+  if (tlUser.department && complaint.responsibleDepartment) {
+    const deptId = complaint.responsibleDepartment?._id 
+      ? complaint.responsibleDepartment._id.toString() 
+      : complaint.responsibleDepartment.toString();
+    const userDeptId = tlUser.department?._id 
+      ? tlUser.department._id.toString() 
+      : tlUser.department.toString();
+    if (deptId === userDeptId) return true;
+  }
+
+  // 4. Staff reporting to this TL
   if (complaint.staffId) {
     const staffUser = await User.findOne({ employeeId: complaint.staffId });
-    if (staffUser && staffUser.teamLeader && staffUser.teamLeader.toString() === tlUser._id.toString()) return true;
+    if (staffUser) {
+      if (staffUser.teamLeader && staffUser.teamLeader.toString() === tlId) return true;
+      if (staffUser.legacyTeamLeader) {
+        const legacyTL = staffUser.legacyTeamLeader.trim().toLowerCase();
+        if (legacyTL === tlName || (tlEmpId && legacyTL === tlEmpId) || legacyTL === tlId.toLowerCase()) {
+          return true;
+        }
+      }
+    }
   }
+
+  // 5. Creator user reporting to this TL
   if (complaint.createdBy) {
     const creatorUser = await User.findById(complaint.createdBy);
-    if (creatorUser && creatorUser.teamLeader && creatorUser.teamLeader.toString() === tlUser._id.toString()) return true;
+    if (creatorUser) {
+      if (creatorUser.teamLeader && creatorUser.teamLeader.toString() === tlId) return true;
+      if (creatorUser.legacyTeamLeader) {
+        const legacyTL = creatorUser.legacyTeamLeader.trim().toLowerCase();
+        if (legacyTL === tlName || (tlEmpId && legacyTL === tlEmpId) || legacyTL === tlId.toLowerCase()) {
+          return true;
+        }
+      }
+    }
   }
+
   return false;
 };
 // Helper to escape regex special characters

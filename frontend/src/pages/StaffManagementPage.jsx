@@ -183,7 +183,7 @@ const StaffManagement = () => {
     return matchesSearch && matchesDept && matchesRole;
   });
 
-  const role = user?.role || 'HR Manager';
+  const role = user?.role || 'HR';
   const getInitials = (name) => {
     if (!name) return 'HR';
     const parts = name.trim().split(' ');
@@ -549,7 +549,7 @@ const StaffManagement = () => {
                   <select value={formData.role} onChange={(e) => setFormData({ ...formData, role: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }}>
                     <option value="Staff">Staff</option>
                     <option value="Team Leader">Team Leader</option>
-                    <option value="HR">HR Manager</option>
+                    <option value="HR">HR</option>
                     <option value="Manager">Manager</option>
                   </select>
                 </div>

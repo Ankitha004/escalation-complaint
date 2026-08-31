@@ -168,18 +168,18 @@ const TrackComplaint = () => {
                               width: '24px', 
                               height: '24px', 
                               borderRadius: '50%', 
-                              background: isLast ? 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)' : '#F1F5F9', 
-                              border: isLast ? 'none' : '2px solid #CBD5E1',
-                              color: isLast ? '#FFF' : 'transparent',
+                              background: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)', 
+                              border: 'none',
+                              color: '#FFF',
                               display: 'flex', 
                               alignItems: 'center', 
                               justifyContent: 'center', 
                               position: 'relative', 
                               zIndex: 1,
                               flexShrink: 0,
-                              boxShadow: isLast ? '0 0 0 4px rgba(79, 70, 229, 0.1)' : 'none'
+                              boxShadow: isLast ? '0 0 0 4px rgba(79, 70, 229, 0.2)' : 'none'
                             }}>
-                              {isLast && <Check size={14} strokeWidth={3} />}
+                              <Check size={14} strokeWidth={3} />
                             </div>
 
                             {/* Content */}

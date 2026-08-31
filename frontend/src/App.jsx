@@ -43,6 +43,8 @@ import ManagerSettings from './pages/ManagerSettings';
 
 // HR Module Pages
 import HRDashboard from './pages/HRDashboard';
+import HRComplaints from './pages/HRComplaints';
+import HRComplaintDetails from './pages/HRComplaintDetails';
 
 const App = () => {
   return (
@@ -68,6 +70,8 @@ const App = () => {
           <Route path="/hr-leaves" element={<LeaveApprovalsPage />} />
           <Route path="/hr-salaries" element={<HRSalaries />} />
           <Route path="/incentives-salary" element={<HRSalaries />} />
+          <Route path="/hr-complaints" element={<HRComplaints />} />
+          <Route path="/hr-complaint-details/:id" element={<HRComplaintDetails />} />
           <Route path="/superadmin-complaints" element={<SuperAdminComplaints />} />
           <Route path="/superadmin-sla" element={<SuperAdminSLA />} />
           <Route path="/superadmin-performance" element={<SuperAdminPerformance />} />

@@ -433,23 +433,257 @@ const getMyStaff = async (req, res, next) => {
 const getHRComplaints = async (req, res, next) => {
   try {
     const Complaint = require('../models/Complaint');
-    const complaints = await Complaint.find({ status: 'Pending HR Review' })
+    // HR can view all complaints across the organization
+    const query = {};
+
+    const complaints = await Complaint.find(query)
+      .populate('createdBy', 'name employeeId')
+      .populate('assignedTo', 'name role')
+      .populate('assignedTeamLeader', 'name')
+      .populate('departmentManager', 'name')
       .populate('responsibleDepartment')
       .sort({ updatedAt: -1 });
+    res.json(complaints);
+  } catch (error) {
+    next(error);
+  }
+};
 
-    const formatted = complaints.map(c => ({
-      _id: c._id,
-      complaintId: c.complaintId,
-      staffName: c.staffName,
-      subject: c.subject,
-      category: c.category,
-      department: c.responsibleDepartment ? c.responsibleDepartment.name : (c.department || 'General'),
-      priority: c.priority,
-      status: c.status,
-      updatedAt: c.updatedAt
-    }));
+// @desc    Get single complaint by ID for HR
+// @route   GET /api/hr/complaints/:id
+// @access  Private (HR/Admin)
+const getHRComplaintById = async (req, res, next) => {
+  try {
+    const Complaint = require('../models/Complaint');
+    const { id } = req.params;
+    let complaint;
 
-    res.json(formatted);
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      complaint = await Complaint.findById(id)
+        .populate('createdBy', 'name employeeId role department')
+        .populate('assignedTo', 'name role employeeId')
+        .populate('assignedTeamLeader', 'name employeeId')
+        .populate('departmentManager', 'name employeeId')
+        .populate('responsibleDepartment', 'name');
+    }
+    if (!complaint) {
+      complaint = await Complaint.findOne({ complaintId: id })
+        .populate('createdBy', 'name employeeId role department')
+        .populate('assignedTo', 'name role employeeId')
+        .populate('assignedTeamLeader', 'name employeeId')
+        .populate('departmentManager', 'name employeeId')
+        .populate('responsibleDepartment', 'name');
+    }
+
+    if (!complaint) {
+      res.status(404);
+      throw new Error('Complaint not found');
+    }
+
+    res.json(complaint);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update complaint status by HR
+// @route   PUT /api/hr/complaints/:id/status
+// @access  Private (HR/Admin)
+const updateHRComplaintStatus = async (req, res, next) => {
+  try {
+    const Complaint = require('../models/Complaint');
+    const { id } = req.params;
+    const { status, note, action } = req.body;
+
+    let complaint;
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      complaint = await Complaint.findById(id);
+    }
+    if (!complaint) {
+      complaint = await Complaint.findOne({ complaintId: id });
+    }
+
+    if (!complaint) {
+      res.status(404);
+      throw new Error('Complaint not found');
+    }
+
+    const newStatus = status || (action === 'accept' ? 'In Progress' : action === 'reject' ? 'Rejected' : complaint.status);
+    complaint.status = newStatus;
+
+    let timelineTitle = `Status changed to ${newStatus}`;
+    if (action === 'accept' || newStatus === 'In Progress') {
+      timelineTitle = 'Accepted by HR';
+    } else if (action === 'reject' || newStatus === 'Rejected') {
+      timelineTitle = 'Rejected by HR';
+    } else if (newStatus === 'Resolved') {
+      timelineTitle = 'Resolved by HR';
+      complaint.resolvedDate = new Date();
+    } else if (newStatus === 'Closed') {
+      timelineTitle = 'Closed';
+      complaint.closedDate = new Date();
+    }
+
+    complaint.timeline.push({
+      title: timelineTitle,
+      description: note || `Updated by HR ${req.user.name} (${req.user.employeeId || 'HR'})`,
+      updatedBy: req.user._id,
+      updatedByName: req.user.name,
+      timestamp: new Date()
+    });
+
+    const updated = await complaint.save();
+    res.json(updated);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Add comment to complaint by HR
+// @route   POST /api/hr/complaints/:id/comment
+// @access  Private (HR/Admin)
+const addHRComment = async (req, res, next) => {
+  try {
+    const Complaint = require('../models/Complaint');
+    const { id } = req.params;
+    const { message, comment } = req.body;
+    const commentText = message || comment;
+
+    if (!commentText || !commentText.trim()) {
+      res.status(400);
+      throw new Error('Comment message is required');
+    }
+
+    let complaint;
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      complaint = await Complaint.findById(id);
+    }
+    if (!complaint) {
+      complaint = await Complaint.findOne({ complaintId: id });
+    }
+
+    if (!complaint) {
+      res.status(404);
+      throw new Error('Complaint not found');
+    }
+
+    complaint.comments.push({
+      senderName: req.user.name || 'HR Portal',
+      senderRole: 'HR',
+      message: commentText.trim(),
+      createdAt: new Date()
+    });
+
+    complaint.timeline.push({
+      title: 'HR Comment Added',
+      description: `HR ${req.user.name} added a comment`,
+      updatedBy: req.user._id,
+      updatedByName: req.user.name,
+      timestamp: new Date()
+    });
+
+    const updated = await complaint.save();
+    res.json(updated);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Submit HR resolution report
+// @route   POST /api/hr/complaints/:id/resolve-report
+// @access  Private (HR/Admin)
+const submitHRResolutionReport = async (req, res, next) => {
+  try {
+    const Complaint = require('../models/Complaint');
+    const { id } = req.params;
+    const { reportText } = req.body;
+
+    if (!reportText) {
+      res.status(400);
+      throw new Error('Report text is required');
+    }
+
+    let complaint;
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      complaint = await Complaint.findById(id);
+    }
+    if (!complaint) {
+      complaint = await Complaint.findOne({ complaintId: id });
+    }
+
+    if (!complaint) {
+      res.status(404);
+      throw new Error('Complaint not found');
+    }
+
+    complaint.status = 'Resolved';
+    complaint.resolvedDate = new Date();
+
+    complaint.resolutionReports.push({
+      solvedBy: req.user._id,
+      solverName: req.user.name,
+      solverRole: 'HR',
+      reportText: reportText,
+      forwardedTo: 'Super Admin',
+      isReviewed: false
+    });
+
+    complaint.timeline.push({
+      title: 'Resolution Report Submitted by HR',
+      description: `HR ${req.user.name} solved the issue and submitted resolution report.`,
+      updatedBy: req.user._id,
+      updatedByName: req.user.name,
+      timestamp: new Date()
+    });
+
+    const updated = await complaint.save();
+    res.json({ message: 'Resolution report submitted successfully', complaint: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Escalate complaint from HR to Super Admin
+// @route   PUT /api/hr/complaints/:id/escalate
+// @access  Private (HR/Admin)
+const escalateHRComplaintToSuperAdmin = async (req, res, next) => {
+  try {
+    const Complaint = require('../models/Complaint');
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    let complaint;
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      complaint = await Complaint.findById(id);
+    }
+    if (!complaint) {
+      complaint = await Complaint.findOne({ complaintId: id });
+    }
+
+    if (!complaint) {
+      res.status(404);
+      throw new Error('Complaint not found');
+    }
+
+    complaint.status = 'Escalated to Super Admin';
+    complaint.escalated = true;
+    complaint.escalatedToSuperAdmin = true;
+
+    complaint.timeline.push({
+      title: 'Escalated to Super Admin',
+      description: reason || `HR ${req.user.name} escalated complaint to Super Admin level.`,
+      updatedBy: req.user._id,
+      updatedByName: req.user.name,
+      timestamp: new Date()
+    });
+
+    const updated = await complaint.save();
+    res.json({ message: 'Complaint escalated to Super Admin successfully', complaint: updated });
   } catch (error) {
     next(error);
   }
@@ -683,6 +917,11 @@ module.exports = {
   rejectRegistration,
   getMyStaff,
   getHRComplaints,
+  getHRComplaintById,
+  updateHRComplaintStatus,
+  addHRComment,
+  submitHRResolutionReport,
+  escalateHRComplaintToSuperAdmin,
   getSalaries,
   updateSalary
 };

@@ -113,7 +113,7 @@ const complaintSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['Pending', 'Submitted', 'In Progress', 'Waiting on User', 'Resolved', 'Approved', 'Closed', 'Rejected', 'Escalated', 'Cancelled', 'Pending HR Review'],
+      enum: ['Pending', 'Submitted', 'In Progress', 'Waiting on User', 'Resolved', 'Approved', 'Closed', 'Rejected', 'Escalated', 'Escalated to Super Admin', 'Cancelled', 'Pending HR Review'],
       default: 'Pending',
     },
     attachments: [

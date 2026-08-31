@@ -105,7 +105,7 @@ const HRDashboard = () => {
   }, []);
 
   const userName = user?.name ? user.name.split(' ')[0] : 'Priya';
-  const role = user?.role || 'HR Manager';
+  const role = user?.role || 'HR';
   
   const getInitials = (name) => {
     if (!name) return 'HR';
@@ -417,13 +417,18 @@ const HRDashboard = () => {
                   <tbody>
                     {pendingComplaints.map((c) => (
                       <tr key={c._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                        <td style={{ padding: '0.75rem 0.25rem', fontWeight: '700', color: '#2563EB' }}>{c.complaintId}</td>
+                        <td 
+                          onClick={() => navigate(`/hr-complaint-details/${c._id}`)} 
+                          style={{ padding: '0.75rem 0.25rem', fontWeight: '700', color: '#2563EB', cursor: 'pointer', textDecoration: 'underline' }}
+                        >
+                          {c.complaintId}
+                        </td>
                         <td style={{ padding: '0.75rem 0.25rem', fontWeight: '700', color: '#0F172A' }}>{c.staffName}</td>
                         <td style={{ padding: '0.75rem 0.25rem', color: '#334155' }}>{c.subject}</td>
                         <td style={{ padding: '0.75rem 0.25rem', color: '#64748B', fontWeight: '600' }}>{c.department}</td>
                         <td style={{ padding: '0.75rem 0.25rem', color: c.priority === 'Critical' ? '#DC2626' : '#D97706', fontWeight: '600' }}>{c.priority}</td>
                         <td style={{ padding: '0.75rem 0.25rem', textAlign: 'right' }}>
-                          <button onClick={() => navigate('/notifications')} style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '0.35rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '600', cursor: 'pointer' }}>Review in Details</button>
+                          <button onClick={() => navigate(`/hr-complaint-details/${c._id}`)} style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '0.35rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '600', cursor: 'pointer' }}>Review in Details</button>
                         </td>
                       </tr>
                     ))}

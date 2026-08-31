@@ -144,7 +144,7 @@ const NotificationsPage = () => {
     return <StaffSidebar activeTab="notifications" unreadCount={unreadCount} />;
   };
 
-  const role = user?.role || 'HR Manager';
+  const role = user?.role || 'HR';
   const getInitials = (name) => {
     if (!name) return 'HR';
     const parts = name.trim().split(' ');

@@ -19,7 +19,13 @@ import {
   BarChart2,
   ChevronRight,
   Send,
-  Check
+  Check,
+  Plus,
+  X,
+  AlertCircle,
+  Sparkles,
+  ShieldCheck,
+  ArrowUpRight
 } from 'lucide-react';
 import { Chart as ArcChart, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
@@ -45,21 +51,30 @@ const StaffDashboard = () => {
   const [myAttendance, setMyAttendance] = useState(null);
   const [myLeaves, setMyLeaves] = useState([]);
   const [recentComplaints, setRecentComplaints] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
-  // Leave Form state
+  // Modals state
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [showLeavesModal, setShowLeavesModal] = useState(false);
+  const [showApplyLeaveForm, setShowApplyLeaveForm] = useState(false);
+  
+  // Leave Form State
   const [leaveType, setLeaveType] = useState('Casual Leave');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [leaveReason, setLeaveReason] = useState('');
+  const [submittingLeave, setSubmittingLeave] = useState(false);
+  const [actionAlert, setActionAlert] = useState(null);
 
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [compRes, leaveRes, attRes, profileRes] = await Promise.all([
-        API.get('/complaints/my'),
-        API.get('/leaves/my'),
-        API.get('/attendance/today'),
-        API.get('/auth/me').catch(() => null)
+      const [compRes, leaveRes, attRes, profileRes, notifRes] = await Promise.all([
+        API.get('/complaints/my').catch(() => ({ data: [] })),
+        API.get('/leaves/my').catch(() => ({ data: [] })),
+        API.get('/attendance/today').catch(() => ({ data: null })),
+        API.get('/auth/me').catch(() => null),
+        API.get('/notifications').catch(() => ({ data: [] }))
       ]);
 
       if (profileRes && profileRes.data) {
@@ -70,9 +85,18 @@ const StaffDashboard = () => {
       if (compList.length > 0) {
         const total = compList.length;
         const pending = compList.filter(c => c.status === 'Pending' || c.status === 'Submitted').length;
-        const inProgress = compList.filter(c => c.status === 'In Progress' || c.status === 'Escalated' || c.status === 'Pending HR Approval').length;
-        const resolved = compList.filter(c => c.status === 'Resolved').length;
-        const closed = compList.filter(c => c.status === 'Closed').length;
+        const inProgress = compList.filter(c => 
+          c.status === 'In Progress' || 
+          c.status === 'Escalated' || 
+          c.status === 'Pending HR Approval' || 
+          c.status === 'Waiting on User'
+        ).length;
+        const resolved = compList.filter(c => c.status === 'Resolved' || c.status === 'Approved').length;
+        const closed = compList.filter(c => 
+          c.status === 'Closed' || 
+          c.status === 'Cancelled' || 
+          c.status === 'Rejected'
+        ).length;
 
         setStats({
           totalComplaints: total,
@@ -97,19 +121,9 @@ const StaffDashboard = () => {
 
       setMyLeaves(leaveRes.data || []);
       setMyAttendance(attRes.data || null);
+      setNotifications(Array.isArray(notifRes.data) ? notifRes.data.slice(0, 3) : []);
     } catch (err) {
       console.warn('Dashboard fetch notice:', err);
-      // Fallback only if server is completely offline
-      setStats({
-        totalComplaints: 0,
-        pendingComplaints: 0,
-        inProgressComplaints: 0,
-        resolvedComplaints: 0,
-        closedComplaints: 0
-      });
-      setRecentComplaints([]);
-      setMyAttendance(null);
-      setMyLeaves([]);
     } finally {
       setLoading(false);
     }
@@ -133,15 +147,18 @@ const StaffDashboard = () => {
   const handleClockIn = async () => {
     try {
       const res = await API.post('/attendance');
-      alert(res.data.message);
+      setActionAlert({ type: 'success', message: res.data.message || 'Attendance status updated successfully' });
       fetchDashboardData();
+      setTimeout(() => setActionAlert(null), 4000);
     } catch (error) {
-      alert(error.response?.data?.message || 'Error clocking in/out');
+      setActionAlert({ type: 'error', message: error.response?.data?.message || 'Error clocking in/out' });
+      setTimeout(() => setActionAlert(null), 4000);
     }
   };
 
   const handleApplyLeave = async (e) => {
     e.preventDefault();
+    setSubmittingLeave(true);
     try {
       await API.post('/leaves', {
         type: leaveType,
@@ -149,21 +166,27 @@ const StaffDashboard = () => {
         endDate,
         reason: leaveReason
       });
-      alert('Leave application submitted successfully!');
+      setActionAlert({ type: 'success', message: 'Leave application submitted successfully!' });
       setStartDate('');
       setEndDate('');
       setLeaveReason('');
+      setShowApplyLeaveForm(false);
       fetchDashboardData();
+      setTimeout(() => setActionAlert(null), 4000);
     } catch (error) {
-      alert(error.response?.data?.message || 'Error submitting leave');
+      setActionAlert({ type: 'error', message: error.response?.data?.message || 'Error submitting leave request' });
+      setTimeout(() => setActionAlert(null), 4000);
+    } finally {
+      setSubmittingLeave(false);
     }
   };
 
-  const userName = profileData?.name || user?.name || 'User';
+
+  const userName = profileData?.name || user?.name || 'Staff Member';
   const role = profileData?.role || user?.role || 'Staff';
   
   const getInitials = (name) => {
-    if (!name || name === 'User') return 'US';
+    if (!name || name === 'User') return 'ST';
     const parts = name.trim().split(' ');
     if (parts.length >= 2) {
       return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
@@ -172,13 +195,24 @@ const StaffDashboard = () => {
   };
   const userInitials = getInitials(userName);
 
-  // Chart Data (Pending/Open, In Progress, Resolved, Closed)
+  // Leave Stats Calculation
+  const totalLeaves = myLeaves.length;
+  const approvedLeaves = myLeaves.filter(l => l.status === 'Approved').length;
+  const pendingLeaves = myLeaves.filter(l => l.status === 'Pending' || l.status === 'Pending Approval').length;
+
+  // Status breakdown calculations
+  const totalChartCount = stats.pendingComplaints + stats.inProgressComplaints + stats.resolvedComplaints + stats.closedComplaints;
+  
   const chartData = {
-    labels: ['Pending / Open', 'In Progress', 'Resolved', 'Closed'],
+    labels: ['Pending / Open', 'In Progress', 'Resolved', 'Closed / Other'],
     datasets: [
       {
-        data: [stats.pendingComplaints, stats.inProgressComplaints, stats.resolvedComplaints, stats.closedComplaints],
-        backgroundColor: ['#F59E0B', '#3B82F6', '#10B981', '#9CA3AF'],
+        data: totalChartCount > 0 
+          ? [stats.pendingComplaints, stats.inProgressComplaints, stats.resolvedComplaints, stats.closedComplaints]
+          : [0, 0, 0, 1],
+        backgroundColor: totalChartCount > 0 
+          ? ['#F59E0B', '#3B82F6', '#10B981', '#94A3B8']
+          : ['#E2E8F0'],
         borderWidth: 0,
         hoverOffset: 4
       }
@@ -190,15 +224,12 @@ const StaffDashboard = () => {
     plugins: {
       legend: { display: false },
       tooltip: {
+        enabled: totalChartCount > 0,
         callbacks: {
           label: function(context) {
             let label = context.label || '';
-            if (label) {
-              label += ': ';
-            }
-            if (context.parsed !== null) {
-              label += context.parsed;
-            }
+            if (label) label += ': ';
+            if (context.parsed !== null) label += context.parsed;
             return label;
           }
         }
@@ -207,267 +238,328 @@ const StaffDashboard = () => {
     maintainAspectRatio: false
   };
 
-  // Leave Stats Calculation
-  const totalLeaves = myLeaves.length;
-  const approvedLeaves = myLeaves.filter(l => l.status === 'Approved').length;
-  const pendingLeaves = myLeaves.filter(l => l.status === 'Pending').length;
+  // Helper text logic
+  let helperTitle = 'All Caught Up';
+  let helperText = 'You have no unresolved complaints. Everything is running smoothly!';
+  if (stats.inProgressComplaints > 0) {
+    helperTitle = 'In Progress';
+    helperText = `${stats.inProgressComplaints} complaint${stats.inProgressComplaints > 1 ? 's are' : ' is'} actively being worked on by your Team Leader.`;
+  } else if (stats.pendingComplaints > 0) {
+    helperTitle = 'Pending Review';
+    helperText = `${stats.pendingComplaints} ticket${stats.pendingComplaints > 1 ? 's are' : ' is'} waiting for team review.`;
+  } else if (stats.resolvedComplaints > 0) {
+    helperTitle = 'Recently Resolved';
+    helperText = 'Your previous complaints have been resolved. Please provide your feedback!';
+  }
+
+
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC', color: '#0F172A', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <StaffSidebar activeTab="dashboard" unreadCount={5} />
+      <StaffSidebar activeTab="dashboard" unreadCount={notifications.filter(n => !n.isRead).length} />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         
         {/* TOP HEADER */}
         <header style={{ 
           background: '#FFFFFF', 
           borderBottom: '1px solid #E2E8F0', 
-          padding: '0.85rem 2.5rem', 
+          padding: '0.85rem 2rem', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'space-between',
           position: 'sticky',
           top: 0,
-          zIndex: 10
+          zIndex: 20
         }}>
-          <div>
-            <Menu size={22} style={{ color: '#475569', cursor: 'pointer' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Menu size={20} style={{ color: '#64748B', cursor: 'pointer' }} />
+            <span style={{ fontSize: '0.9rem', fontWeight: '700', color: '#0F172A', fontFamily: "'Outfit', sans-serif" }}>Employee Workspace</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#475569', fontSize: '0.875rem', fontWeight: '500' }}>
-              <Calendar size={18} style={{ color: '#64748B' }} />
-              <span>{new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'long' })}</span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748B', fontSize: '0.825rem', fontWeight: '500', background: '#F1F5F9', padding: '0.4rem 0.85rem', borderRadius: '20px' }}>
+              <Calendar size={15} style={{ color: '#3B82F6' }} />
+              <span>{new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' })}</span>
             </div>
             
-            <div style={{ position: 'relative', cursor: 'pointer' }}>
-              <Bell size={20} style={{ color: '#475569' }} />
-              <span style={{ 
-                position: 'absolute', 
-                top: '-4px', 
-                right: '-4px', 
-                background: '#EF4444', 
-                color: '#FFF', 
-                fontSize: '0.65rem', 
-                fontWeight: '800', 
-                height: '18px',
-                width: '18px',
-                borderRadius: '50%', 
-                border: '2px solid #FFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                5
-              </span>
+            <div 
+              onClick={() => navigate('/notifications')}
+              style={{ position: 'relative', cursor: 'pointer', padding: '0.4rem', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0' }}
+            >
+              <Bell size={18} style={{ color: '#475569' }} />
+              {notifications.some(n => !n.isRead) && (
+                <span style={{ 
+                  position: 'absolute', 
+                  top: '-2px', 
+                  right: '-2px', 
+                  background: '#EF4444', 
+                  color: '#FFF', 
+                  fontSize: '0.6rem', 
+                  fontWeight: '800', 
+                  height: '16px',
+                  minWidth: '16px',
+                  borderRadius: '50%', 
+                  border: '2px solid #FFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 2px'
+                }}>
+                  {notifications.filter(n => !n.isRead).length}
+                </span>
+              )}
             </div>
 
             <div 
               onClick={() => navigate('/profile')}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', padding: '0.25rem 0.5rem', borderRadius: '12px', transition: 'background 0.2s' }}
             >
               <div style={{ 
-                width: '38px', 
-                height: '38px', 
-                borderRadius: '50%', 
+                width: '36px', 
+                height: '36px', 
+                borderRadius: '10px', 
                 background: 'linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%)', 
                 color: '#FFF', 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center', 
                 fontWeight: '700', 
-                fontSize: '0.875rem',
+                fontSize: '0.85rem',
                 boxShadow: '0 4px 10px rgba(59, 130, 246, 0.25)'
               }}>
                 {userInitials}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.875rem', fontWeight: '700', color: '#0F172A', lineHeight: '1.2' }}>{userName}</span>
-                <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '500' }}>{role}</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0F172A', lineHeight: '1.2' }}>{userName}</span>
+                <span style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: '500' }}>{role}</span>
               </div>
-              <ChevronDown size={16} style={{ color: '#64748B' }} />
+              <ChevronDown size={14} style={{ color: '#94A3B8' }} />
             </div>
           </div>
         </header>
 
+
+
+        {/* NOTIFICATION TOAST ALERT */}
+        {actionAlert && (
+          <div style={{
+            margin: '1.5rem 2rem 0 2rem',
+            padding: '0.85rem 1.25rem',
+            borderRadius: '12px',
+            background: actionAlert.type === 'success' ? '#ECFDF5' : '#FEF2F2',
+            border: `1px solid ${actionAlert.type === 'success' ? '#A7F3D0' : '#FECACA'}`,
+            color: actionAlert.type === 'success' ? '#065F46' : '#991B1B',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              {actionAlert.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+              <span>{actionAlert.message}</span>
+            </div>
+            <X size={16} style={{ cursor: 'pointer' }} onClick={() => setActionAlert(null)} />
+          </div>
+        )}
+
         {/* MAIN DASHBOARD CONTENT */}
-        <main style={{ flex: 1, padding: '2.5rem', overflowY: 'auto' }}>
+        <main style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
           
           {/* WELCOME BANNER */}
           <div style={{ 
-            background: 'linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)', 
-            borderRadius: '24px', 
-            padding: '2.5rem 3rem', 
-            marginBottom: '2.5rem',
+            background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)', 
+            borderRadius: '20px', 
+            padding: '2.25rem 2.5rem', 
+            marginBottom: '2rem',
             position: 'relative',
             overflow: 'hidden',
-            border: '1px solid rgba(255, 255, 255, 0.7)',
-            boxShadow: '0 4px 20px rgba(99, 102, 241, 0.05)'
+            boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.15)',
+            border: '1px solid rgba(255, 255, 255, 0.08)'
           }}>
-            <div style={{ position: 'relative', zIndex: 2, maxWidth: '60%' }}>
-              <h1 style={{ fontSize: '2rem', fontWeight: '800', color: '#0F172A', margin: '0 0 0.5rem 0', fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em' }}>
-                Welcome back, {userName}! 👋
-              </h1>
-              <p style={{ color: '#475569', fontSize: '0.95rem', fontWeight: '500', lineHeight: '1.5', margin: 0 }}>
-                Manage your self-service tasks, check attendance, and track complaints.
-              </p>
-            </div>
-            
-            {/* Elegant glassmorphism graphic cards inside the welcome banner */}
-            <div style={{
-              position: 'absolute',
-              right: '5%',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: '320px',
-              height: '140px',
-              display: 'flex',
-              gap: '1rem',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              pointerEvents: 'none',
-              opacity: 0.95
-            }}>
-              {/* Floating UI card 1 */}
-              <div style={{
-                width: '180px',
-                height: '110px',
-                background: 'rgba(255, 255, 255, 0.9)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '16px',
-                border: '1px solid rgba(255, 255, 255, 0.6)',
-                boxShadow: '0 8px 32px rgba(99, 102, 241, 0.08)',
-                padding: '0.85rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transform: 'rotate(-4deg) translateY(10px)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#64748B' }}>System SLA Status</span>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981' }} />
+            {/* Ambient background glows */}
+            <div style={{ position: 'absolute', top: '-60px', right: '-40px', width: '220px', height: '220px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, rgba(0,0,0,0) 70%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: '-40px', left: '30%', width: '180px', height: '180px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(124, 58, 237, 0.25) 0%, rgba(0,0,0,0) 70%)', pointerEvents: 'none' }} />
+
+            <div style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
+              <div style={{ maxWidth: '560px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '4px 10px', borderRadius: '20px', color: '#60A5FA', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem' }}>
+                  <Sparkles size={12} /> Staff Self-Service Hub
                 </div>
-                <div style={{ height: '36px', display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
-                  <div style={{ flex: 1, height: '40%', background: '#E2E8F0', borderRadius: '2px' }} />
-                  <div style={{ flex: 1, height: '60%', background: '#CBD5E1', borderRadius: '2px' }} />
-                  <div style={{ flex: 1, height: '80%', background: '#94A3B8', borderRadius: '2px' }} />
-                  <div style={{ flex: 1, height: '55%', background: '#CBD5E1', borderRadius: '2px' }} />
-                  <div style={{ flex: 1, height: '95%', background: 'linear-gradient(to top, #3B82F6, #60A5FA)', borderRadius: '2px' }} />
-                </div>
-                <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#0F172A' }}>98.4% Compliance</span>
+                <h1 style={{ fontSize: '1.85rem', fontWeight: '800', color: '#FFFFFF', margin: '0 0 0.5rem 0', fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em' }}>
+                  Welcome back, {userName}! 👋
+                </h1>
+                <p style={{ color: '#94A3B8', fontSize: '0.9rem', fontWeight: '500', lineHeight: '1.5', margin: 0 }}>
+                  Submit complaints and monitor SLA resolution progress seamlessly.
+                </p>
               </div>
-              
-              {/* Floating UI card 2 */}
-              <div style={{
-                width: '130px',
-                height: '90px',
-                background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-                borderRadius: '14px',
-                boxShadow: '0 8px 32px rgba(124, 58, 237, 0.2)',
-                padding: '0.75rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                transform: 'rotate(4deg) translateY(-5px)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.6rem', fontWeight: '600', color: 'rgba(255, 255, 255, 0.7)' }}>Active SLA</span>
-                  <Activity size={12} style={{ color: 'rgba(255, 255, 255, 0.8)' }} />
-                </div>
-                <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#FFFFFF', fontFamily: "'Outfit', sans-serif" }}>100%</div>
-                <span style={{ fontSize: '0.55rem', fontWeight: '500', color: 'rgba(255, 255, 255, 0.8)' }}>All clear</span>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+                <button 
+                  onClick={() => setShowAttendanceModal(true)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '12px',
+                    padding: '0.75rem 1.25rem',
+                    fontWeight: '600',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <Clock size={16} /> Attendance
+                </button>
+                <button 
+                  onClick={() => setShowLeavesModal(true)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '12px',
+                    padding: '0.75rem 1.25rem',
+                    fontWeight: '600',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <Calendar size={16} /> Leave Requests
+                </button>
+                <button 
+                  onClick={() => navigate('/raise-complaint')}
+                  style={{
+                    background: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '0.75rem 1.25rem',
+                    fontWeight: '700',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <Plus size={16} /> Raise Complaint
+                </button>
               </div>
             </div>
           </div>
 
-          {/* STATS CARDS */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+          {/* STATS METRIC CARDS */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
             
             <StatCard 
               title="Total Complaints" 
               value={stats.totalComplaints} 
-              icon={<FileText size={24} color="#3B82F6" />} 
+              icon={<FileText size={22} color="#3B82F6" />} 
               iconBg="#EFF6FF" 
               onClick={() => navigate('/my-complaints')} 
+              badgeText="View Tickets"
             />
             
             <StatCard 
-              title="Pending / Open" 
-              value={stats.pendingComplaints} 
-              icon={<FileText size={24} color="#F59E0B" />} 
+              title="In Progress / Open" 
+              value={stats.inProgressComplaints + stats.pendingComplaints} 
+              icon={<Clock size={22} color="#F59E0B" />} 
               iconBg="#FFFBEB" 
-              valueColor="#F59E0B"
+              valueColor="#D97706"
               onClick={() => navigate('/my-complaints')} 
+              badgeText="Active SLA"
             />
             
             <StatCard 
               title="Resolved Complaints" 
               value={stats.resolvedComplaints} 
-              icon={<CheckCircle2 size={24} color="#10B981" />} 
+              icon={<CheckCircle2 size={22} color="#10B981" />} 
               iconBg="#ECFDF5" 
-              valueColor="#10B981"
+              valueColor="#059669"
               onClick={() => navigate('/my-complaints')} 
-            />
-            
-            <StatCard 
-              title="Attendance Status" 
-              value={myAttendance ? myAttendance.status : 'Absent'} 
-              icon={<Calendar size={24} color="#8B5CF6" />} 
-              iconBg="#F5F3FF" 
-              valueColor={myAttendance?.status === 'Present' ? '#10B981' : '#0F172A'}
-              onClick={() => {
-                const el = document.getElementById('attendance');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }} 
-              linkText="View attendance"
+              badgeText="Completed"
             />
 
           </div>
 
           {/* TWO COLUMN GRID */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(0, 1fr)', gap: '1.75rem' }}>
             
             {/* LEFT COLUMN */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
               
               {/* MY RECENT COMPLAINTS */}
               <div style={{ 
                 background: '#FFFFFF', 
-                borderRadius: '20px', 
-                padding: '1.75rem', 
-                boxShadow: 'var(--shadow-sm)', 
+                borderRadius: '18px', 
+                padding: '1.5rem', 
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)', 
                 border: '1px solid #E2E8F0' 
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>My Recent Complaints</h3>
-                  <span onClick={() => navigate('/my-complaints')} style={{ fontSize: '0.8rem', fontWeight: '700', color: '#3B82F6', cursor: 'pointer' }}>View All</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <div style={{ width: '8px', height: '18px', borderRadius: '4px', background: '#3B82F6' }}></div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>My Recent Complaints</h3>
+                  </div>
+                  <span onClick={() => navigate('/my-complaints')} style={{ fontSize: '0.8rem', fontWeight: '700', color: '#3B82F6', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                    View All <ArrowUpRight size={14} />
+                  </span>
                 </div>
                 
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {recentComplaints.length > 0 ? recentComplaints.map((c, idx) => {
                     let statusColor = '#3B82F6';
                     let statusBg = '#EFF6FF';
-                    if (c.status === 'Resolved' || c.status === 'Closed') {
-                      statusColor = '#10B981';
+                    const s = (c.status || '').toLowerCase();
+                    
+                    if (s === 'resolved' || s === 'approved') {
+                      statusColor = '#059669';
                       statusBg = '#ECFDF5';
-                    } else if (c.status === 'Pending' || c.status === 'Submitted') {
-                      statusColor = '#F59E0B';
+                    } else if (s === 'pending' || s === 'submitted') {
+                      statusColor = '#D97706';
                       statusBg = '#FFFBEB';
-                    } else if (c.status === 'Escalated' || c.status === 'Rejected') {
-                      statusColor = '#EF4444';
+                    } else if (s === 'escalated' || s === 'rejected') {
+                      statusColor = '#DC2626';
                       statusBg = '#FEF2F2';
-                    } else if (c.status === 'Approved') {
-                      statusColor = '#3B82F6';
-                      statusBg = '#EFF6FF';
+                    } else if (s === 'cancelled' || s === 'closed') {
+                      statusColor = '#64748B';
+                      statusBg = '#F1F5F9';
+                    } else if (s === 'waiting on user') {
+                      statusColor = '#EA580C';
+                      statusBg = '#FFF7ED';
                     }
                     
                     return (
-                      <div key={c._id || idx} style={{ 
-                        padding: '1rem 0', 
-                        borderBottom: idx !== recentComplaints.length - 1 ? '1px solid #F1F5F9' : 'none', 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center' 
-                      }}>
+                      <div 
+                        key={c._id || idx} 
+                        onClick={() => navigate(`/complaint-details/${c._id}`)}
+                        style={{ 
+                          padding: '0.9rem 0.5rem', 
+                          borderBottom: idx !== recentComplaints.length - 1 ? '1px solid #F1F5F9' : 'none', 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          transition: 'background 0.15s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#F8FAFC'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                           <div style={{ 
                             width: '38px', 
@@ -482,46 +574,50 @@ const StaffDashboard = () => {
                             <FileText size={18} color={statusColor} />
                           </div>
                           <div>
-                            <div style={{ fontWeight: '600', color: '#0F172A', fontSize: '0.875rem', marginBottom: '0.2rem', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: '600', color: '#0F172A', fontSize: '0.875rem', marginBottom: '0.2rem', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {c.title || c.subject}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '500' }}>
-                              #{c.complaintId} • {c.category}
+                            <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '500' }}>
+                              #{c.complaintId || 'CMP'} • {c.category || 'General'}
                             </div>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem' }}>
                             <span style={{ 
                               background: statusBg, 
                               color: statusColor, 
-                              padding: '2px 8px', 
+                              padding: '3px 8px', 
                               borderRadius: '6px', 
-                              fontSize: '0.7rem', 
+                              fontSize: '0.68rem', 
                               fontWeight: '700', 
                               textTransform: 'uppercase',
-                              letterSpacing: '0.02em'
+                              letterSpacing: '0.03em'
                             }}>
                               {c.status}
                             </span>
-                            <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: '500' }}>
-                              {new Date(c.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            <span style={{ fontSize: '0.68rem', color: '#94A3B8', fontWeight: '500' }}>
+                              {new Date(c.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </span>
                           </div>
-                          <ChevronRight size={16} style={{ color: '#94A3B8', cursor: 'pointer' }} onClick={() => navigate(`/complaint-details/${c._id}`)} />
+                          <ChevronRight size={16} style={{ color: '#94A3B8' }} />
                         </div>
                       </div>
                     );
                   }) : (
-                    <div style={{ padding: '2rem 1rem', textAlign: 'center' }}>
-                      <p style={{ margin: 0, color: '#64748B', fontSize: '0.85rem' }}>No recent complaints found.</p>
+                    <div style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem auto' }}>
+                        <FileText size={22} color="#94A3B8" />
+                      </div>
+                      <p style={{ margin: '0 0 0.5rem 0', color: '#0F172A', fontSize: '0.9rem', fontWeight: '600' }}>No complaints filed yet</p>
+                      <p style={{ margin: 0, color: '#64748B', fontSize: '0.8rem' }}>Encountering an issue? Raise a ticket and track its SLA progress in real time.</p>
                     </div>
                   )}
                 </div>
                 
                 {recentComplaints.length > 0 && (
-                  <div style={{ textAlign: 'center', marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #F1F5F9' }}>
-                    <span onClick={() => navigate('/my-complaints')} style={{ fontSize: '0.875rem', fontWeight: '600', color: '#3B82F6', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <div style={{ textAlign: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #F1F5F9' }}>
+                    <span onClick={() => navigate('/my-complaints')} style={{ fontSize: '0.825rem', fontWeight: '600', color: '#3B82F6', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
                       Go to My Complaints <ChevronRight size={14} />
                     </span>
                   </div>
@@ -531,46 +627,56 @@ const StaffDashboard = () => {
               {/* COMPLAINT STATUS OVERVIEW */}
               <div style={{ 
                 background: '#FFFFFF', 
-                borderRadius: '20px', 
-                padding: '1.75rem', 
-                boxShadow: 'var(--shadow-sm)', 
+                borderRadius: '18px', 
+                padding: '1.5rem', 
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)', 
                 border: '1px solid #E2E8F0' 
               }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0F172A', margin: '0 0 1.5rem 0', fontFamily: "'Outfit', sans-serif" }}>Complaint Status Overview</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' }}>
+                  <div style={{ width: '8px', height: '18px', borderRadius: '4px', background: '#8B5CF6' }}></div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Complaint Status Overview</h3>
+                </div>
                 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                  <div style={{ width: '130px', height: '130px', position: 'relative', flexShrink: 0 }}>
-                    {stats.totalComplaints > 0 ? (
-                      <Doughnut data={chartData} options={chartOptions} />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: '#F8FAFC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontSize: '0.8rem' }}>No Data</div>
-                    )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+                  {/* DOUGHNUT CHART CONTAINER */}
+                  <div style={{ width: '120px', height: '120px', position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Doughnut data={chartData} options={chartOptions} />
+                    <div style={{ position: 'absolute', textAlign: 'center', pointerEvents: 'none' }}>
+                      <div style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0F172A', lineHeight: '1', fontFamily: "'Outfit', sans-serif" }}>
+                        {stats.totalComplaints}
+                      </div>
+                      <div style={{ fontSize: '0.6rem', color: '#94A3B8', fontWeight: '600', textTransform: 'uppercase' }}>
+                        Total
+                      </div>
+                    </div>
                   </div>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', flex: 1 }}>
+                  {/* LEGEND BREAKDOWN */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1, minWidth: '160px' }}>
                     <ChartLegendItem color="#F59E0B" label="Pending / Open" count={stats.pendingComplaints} total={stats.totalComplaints} />
                     <ChartLegendItem color="#3B82F6" label="In Progress" count={stats.inProgressComplaints} total={stats.totalComplaints} />
                     <ChartLegendItem color="#10B981" label="Resolved" count={stats.resolvedComplaints} total={stats.totalComplaints} />
-                    <ChartLegendItem color="#9CA3AF" label="Closed" count={stats.closedComplaints} total={stats.totalComplaints} />
+                    <ChartLegendItem color="#94A3B8" label="Closed / Cancelled" count={stats.closedComplaints} total={stats.totalComplaints} />
                   </div>
 
-                  {/* Status Helper Card */}
+                  {/* DYNAMIC HELPER CARD */}
                   <div style={{ 
                     flex: 1,
-                    background: 'linear-gradient(135deg, #EFF6FF 0%, #E0E7FF 100%)', 
-                    borderRadius: '16px', 
+                    minWidth: '180px',
+                    background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)', 
+                    borderRadius: '14px', 
                     padding: '1rem',
-                    border: '1px solid rgba(59, 130, 246, 0.1)',
+                    border: '1px solid #E2E8F0',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '0.5rem'
+                    gap: '0.4rem'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#2563EB', fontWeight: '700', fontSize: '0.85rem' }}>
-                      <BarChart2 size={16} />
-                      <span>In Progress</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#2563EB', fontWeight: '700', fontSize: '0.825rem' }}>
+                      <Activity size={15} />
+                      <span>{helperTitle}</span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.78rem', color: '#475569', fontWeight: '500', lineHeight: '1.4' }}>
-                      Most of your complaints are currently being worked on.
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#64748B', fontWeight: '500', lineHeight: '1.45' }}>
+                      {helperText}
                     </p>
                   </div>
                 </div>
@@ -579,283 +685,291 @@ const StaffDashboard = () => {
             </div>
 
             {/* RIGHT COLUMN */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
               
-              {/* ATTENDANCE OVERVIEW */}
-              <div id="attendance" style={{ 
-                background: '#FFFFFF', 
-                borderRadius: '20px', 
-                padding: '1.75rem', 
-                boxShadow: 'var(--shadow-sm)', 
-                border: '1px solid #E2E8F0' 
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Attendance Overview</h3>
-                  <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#3B82F6', cursor: 'pointer' }}>View All</span>
-                </div>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', borderBottom: '1px solid #F1F5F9', paddingBottom: '1.25rem' }}>
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600', marginBottom: '0.35rem' }}>Today</div>
-                      <span style={{ 
-                        background: myAttendance?.status === 'Present' ? '#ECFDF5' : '#FFF1F2', 
-                        color: myAttendance?.status === 'Present' ? '#10B981' : '#F43F5E', 
-                        padding: '3px 12px', 
-                        borderRadius: '12px', 
-                        fontSize: '0.75rem', 
-                        fontWeight: '700' 
-                      }}>
-                        {myAttendance ? myAttendance.status : 'Absent'}
-                      </span>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600', marginBottom: '0.2rem' }}>Working Hours</div>
-                      <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#0F172A' }}>
-                        {myAttendance && myAttendance.clockOut && myAttendance.clockOut !== 'In Progress' ? 'Completed' : '08:45 Hrs'}
-                      </div>
-                    </div>
-                  </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', justifyContent: 'center' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600' }}>Clock In</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontWeight: '700', color: '#10B981', fontSize: '0.85rem' }}>{myAttendance?.clockIn || '-- : --'}</span>
-                        <div style={{ background: '#ECFDF5', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}><LogIn size={12} color="#10B981" /></div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.78rem', color: '#475569', fontWeight: '600' }}>Clock Out</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontWeight: '700', color: '#0F172A', fontSize: '0.85rem' }}>{myAttendance?.clockOut && myAttendance.clockOut !== 'In Progress' ? myAttendance.clockOut : '-- : --'}</span>
-                        <div style={{ background: '#FFF1F2', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}><LogOut size={12} color="#F43F5E" /></div>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-
-                <div style={{ marginTop: '1.25rem' }}>
-                   {myAttendance && myAttendance.clockOut !== 'In Progress' ? (
-                      <div style={{ 
-                        background: '#ECFDF5', 
-                        border: '1px solid rgba(16, 185, 129, 0.15)',
-                        borderRadius: '12px', 
-                        padding: '0.75rem 1rem', 
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.6rem'
-                      }}>
-                        <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Check size={14} color="#FFF" />
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#065F46' }}>Attendance Completed</div>
-                          <div style={{ fontSize: '0.7rem', color: '#047857', fontWeight: '500' }}>Great job!</div>
-                        </div>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={handleClockIn} 
-                        style={{ 
-                          width: '100%', 
-                          background: myAttendance ? '#0F172A' : '#3B82F6', 
-                          color: '#FFFFFF', 
-                          border: 'none', 
-                          borderRadius: '10px', 
-                          padding: '0.75rem', 
-                          fontWeight: '600', 
-                          fontSize: '0.85rem', 
-                          cursor: 'pointer', 
-                          transition: 'opacity 0.2s',
-                          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)'
-                        }}
-                      >
-                        {myAttendance ? 'Clock Out Now' : 'Clock In Now'}
-                      </button>
-                    )}
-                </div>
-              </div>
-
-              {/* LEAVE SUMMARY */}
-              <div id="leaves" style={{ 
-                background: '#FFFFFF', 
-                borderRadius: '20px', 
-                padding: '1.75rem', 
-                boxShadow: 'var(--shadow-sm)', 
-                border: '1px solid #E2E8F0' 
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Leave Summary</h3>
-                  <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#3B82F6', cursor: 'pointer' }}>View All</span>
-                </div>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', textAlign: 'center', marginBottom: '1.5rem', background: '#F8FAFC', padding: '1rem', borderRadius: '14px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.7rem', color: '#3B82F6', fontWeight: '700', marginBottom: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Total Leaves</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#3B82F6' }}>{totalLeaves}</div>
-                  </div>
-                  <div style={{ width: '1px', background: '#E2E8F0' }}></div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: '700', marginBottom: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Approved</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#10B981' }}>{approvedLeaves}</div>
-                  </div>
-                  <div style={{ width: '1px', background: '#E2E8F0' }}></div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.7rem', color: '#F59E0B', fontWeight: '700', marginBottom: '0.2rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Pending</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#F59E0B' }}>{pendingLeaves}</div>
-                  </div>
-                </div>
-
-                <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '1rem' }}>
-                  <h4 style={{ fontSize: '0.875rem', fontWeight: '700', color: '#0F172A', marginBottom: '0.85rem' }}>Request Leave</h4>
-                  <form onSubmit={handleApplyLeave} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                    
-                    <div style={{ position: 'relative' }}>
-                      <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)} style={inputStyle}>
-                        <option value="Casual Leave">Casual Leave</option>
-                        <option value="Sick Leave">Sick Leave</option>
-                        <option value="Emergency Leave">Emergency Leave</option>
-                      </select>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      <div style={{ flex: 1, position: 'relative' }}>
-                        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required style={inputStyle} />
-                      </div>
-                      <div style={{ flex: 1, position: 'relative' }}>
-                        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required style={inputStyle} />
-                      </div>
-                    </div>
-
-                    <textarea 
-                      value={leaveReason} 
-                      onChange={(e) => setLeaveReason(e.target.value)} 
-                      required 
-                      placeholder="Reason for leave..." 
-                      style={{...inputStyle, height: '65px', resize: 'none'}} 
-                    />
-
-                    <button type="submit" style={{ 
-                      background: 'linear-gradient(135deg, #3B82F6 0%, #7C3AED 100%)', 
-                      color: '#FFFFFF', 
-                      border: 'none', 
-                      borderRadius: '10px', 
-                      padding: '0.75rem', 
-                      fontWeight: '600', 
-                      fontSize: '0.85rem', 
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      boxShadow: '0 4px 15px rgba(99, 102, 241, 0.2)'
-                    }}>
-                      Submit Application
-                      <Send size={14} />
-                    </button>
-                  </form>
-                </div>
-              </div>
 
               {/* NOTIFICATIONS WIDGET */}
               <div style={{ 
                 background: '#FFFFFF', 
-                borderRadius: '20px', 
-                padding: '1.75rem', 
-                boxShadow: 'var(--shadow-sm)', 
+                borderRadius: '18px', 
+                padding: '1.5rem', 
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)', 
                 border: '1px solid #E2E8F0' 
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Notifications</h3>
-                  <span onClick={() => navigate('/notifications')} style={{ fontSize: '0.8rem', fontWeight: '700', color: '#3B82F6', cursor: 'pointer' }}>View All</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <div style={{ width: '8px', height: '18px', borderRadius: '4px', background: '#3B82F6' }}></div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Notifications</h3>
+                  </div>
+                  <span onClick={() => navigate('/notifications')} style={{ fontSize: '0.78rem', fontWeight: '700', color: '#3B82F6', cursor: 'pointer' }}>View All</span>
                 </div>
                 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  
-                  <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
-                    <div style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      borderRadius: '50%', 
-                      background: '#EFF6FF', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <Bell size={14} color="#3B82F6" />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500', lineHeight: '1.4' }}>
-                        Your complaint #CMP-2025-0012 status updated to In Progress.
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {notifications.length > 0 ? (
+                    notifications.map((n, idx) => (
+                      <div key={n._id || idx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', padding: '0.4rem 0' }}>
+                        <div style={{ 
+                          width: '30px', 
+                          height: '30px', 
+                          borderRadius: '50%', 
+                          background: n.isRead ? '#F1F5F9' : '#EFF6FF', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          flexShrink: 0
+                        }}>
+                          <Bell size={14} color={n.isRead ? '#64748B' : '#3B82F6'} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: n.isRead ? '500' : '600', lineHeight: '1.35' }}>
+                            {n.message}
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: '#94A3B8', marginTop: '0.15rem', fontWeight: '500' }}>
+                            {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(n.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.68rem', color: '#94A3B8', marginTop: '0.2rem', fontWeight: '500' }}>10 mins ago</div>
+                    ))
+                  ) : (
+                    <div style={{ padding: '1rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.78rem' }}>
+                      You're all caught up! No new notifications.
                     </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
-                    <div style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      borderRadius: '50%', 
-                      background: '#ECFDF5', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <MessageSquare size={14} color="#10B981" />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500', lineHeight: '1.4' }}>
-                        You have a new message from Team Leader.
-                      </div>
-                      <div style={{ fontSize: '0.68rem', color: '#94A3B8', marginTop: '0.2rem', fontWeight: '500' }}>1 hour ago</div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
-                    <div style={{ 
-                      width: '32px', 
-                      height: '32px', 
-                      borderRadius: '50%', 
-                      background: '#FFFBEB', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <Clock size={14} color="#F59E0B" />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.8rem', color: '#475569', fontWeight: '500', lineHeight: '1.4' }}>
-                        Reminder: Complete your attendance for today.
-                      </div>
-                      <div style={{ fontSize: '0.68rem', color: '#94A3B8', marginTop: '0.2rem', fontWeight: '500' }}>2 hours ago</div>
-                    </div>
-                  </div>
-
-                </div>
-
-                <div style={{ textAlign: 'center', marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #F1F5F9' }}>
-                  <span onClick={() => navigate('/notifications')} style={{ fontSize: '0.85rem', fontWeight: '600', color: '#3B82F6', cursor: 'pointer' }}>
-                    Go to Notifications →
-                  </span>
+                  )}
                 </div>
               </div>
 
             </div>
           </div>
         </main>
+
+
+
+        {/* MODALS */}
+        {showAttendanceModal && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: '1.5rem'
+          }}>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              width: '100%',
+              maxWidth: '400px',
+              padding: '2rem',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              border: '1px solid #E2E8F0',
+              animation: 'fadeIn 0.25s ease-out'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Clock size={18} color="#16A34A" />
+                  </div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Attendance</h3>
+                </div>
+                <button onClick={() => setShowAttendanceModal(false)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <X size={16} color="#64748B" />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '12px', flex: 1, marginRight: '0.5rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>Clock In</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0F172A' }}>{myAttendance?.clockIn || '--:--'}</div>
+                </div>
+                <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '12px', flex: 1, marginLeft: '0.5rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>Clock Out</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0F172A' }}>{myAttendance?.clockOut && myAttendance.clockOut !== 'In Progress' ? myAttendance.clockOut : '--:--'}</div>
+                </div>
+              </div>
+
+              {myAttendance && myAttendance.clockOut && myAttendance.clockOut !== 'In Progress' ? (
+                <div style={{ background: '#ECFDF5', padding: '1rem', borderRadius: '12px', textAlign: 'center', color: '#065F46', fontWeight: '600' }}>
+                  Shift Completed
+                </div>
+              ) : (
+                <button 
+                  onClick={handleClockIn} 
+                  style={{ 
+                    width: '100%', 
+                    background: myAttendance ? '#0F172A' : '#2563EB', 
+                    color: '#FFFFFF', 
+                    border: 'none', 
+                    borderRadius: '12px', 
+                    padding: '1rem', 
+                    fontWeight: '700', 
+                    fontSize: '1rem', 
+                    cursor: 'pointer', 
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  {myAttendance ? <LogOut size={18} /> : <LogIn size={18} />}
+                  {myAttendance ? 'Clock Out Now' : 'Clock In Now'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showLeavesModal && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: '1.5rem'
+          }}>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              width: '100%',
+              maxWidth: '600px',
+              padding: '2rem',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              border: '1px solid #E2E8F0',
+              animation: 'fadeIn 0.25s ease-out'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FFFBEB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Calendar size={18} color="#D97706" />
+                  </div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Leave Management</h3>
+                </div>
+                <button onClick={() => setShowLeavesModal(false)} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <X size={16} color="#64748B" />
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+                <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Total</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#3B82F6' }}>{totalLeaves}</div>
+                </div>
+                <div style={{ background: '#ECFDF5', padding: '1rem', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#065F46', fontWeight: '700', textTransform: 'uppercase' }}>Approved</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#10B981' }}>{approvedLeaves}</div>
+                </div>
+                <div style={{ background: '#FFFBEB', padding: '1rem', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#92400E', fontWeight: '700', textTransform: 'uppercase' }}>Pending</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#F59E0B' }}>{pendingLeaves}</div>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1.5rem', maxHeight: '200px', overflowY: 'auto', borderTop: '1px solid #E2E8F0', paddingTop: '1rem' }}>
+                {myLeaves.length > 0 ? myLeaves.map((l, i) => (
+                  <div key={l._id || i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid #F1F5F9' }}>
+                    <div>
+                      <div style={{ fontWeight: '600', fontSize: '0.85rem' }}>{l.type}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{new Date(l.startDate).toLocaleDateString()} - {new Date(l.endDate).toLocaleDateString()}</div>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: l.status === 'Approved' ? '#10B981' : l.status === 'Rejected' ? '#DC2626' : '#F59E0B' }}>{l.status}</span>
+                  </div>
+                )) : (
+                  <div style={{ textAlign: 'center', color: '#64748B', fontSize: '0.85rem' }}>No leaves found</div>
+                )}
+              </div>
+
+              <button 
+                onClick={() => { setShowLeavesModal(false); setShowApplyLeaveForm(true); }}
+                style={{ width: '100%', background: '#2563EB', color: '#FFFFFF', border: 'none', borderRadius: '12px', padding: '1rem', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Apply for Leave
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showApplyLeaveForm && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: '1.5rem'
+          }}>
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              width: '100%',
+              maxWidth: '480px',
+              padding: '2rem',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              border: '1px solid #E2E8F0',
+              animation: 'fadeIn 0.25s ease-out'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FFFBEB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Calendar size={18} color="#D97706" />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Apply for Leave</h3>
+                  </div>
+                </div>
+                <button onClick={() => { setShowApplyLeaveForm(false); setShowLeavesModal(true); }} style={{ background: '#F1F5F9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <X size={16} color="#64748B" />
+                </button>
+              </div>
+
+              <form onSubmit={handleApplyLeave} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>Leave Type</label>
+                  <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)} style={modalInputStyle}>
+                    <option value="Casual Leave">Casual Leave</option>
+                    <option value="Sick Leave">Sick Leave</option>
+                    <option value="Emergency Leave">Emergency Leave</option>
+                    <option value="Earned Leave">Earned Leave</option>
+                  </select>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>Start Date</label>
+                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required style={modalInputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>End Date</label>
+                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required style={modalInputStyle} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>Reason for Leave</label>
+                  <textarea value={leaveReason} onChange={(e) => setLeaveReason(e.target.value)} required style={{ ...modalInputStyle, height: '80px', resize: 'none' }} />
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <button type="button" onClick={() => { setShowApplyLeaveForm(false); setShowLeavesModal(true); }} style={{ flex: 1, background: '#F1F5F9', border: '1px solid #E2E8F0', padding: '0.75rem', borderRadius: '10px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                  <button type="submit" disabled={submittingLeave} style={{ flex: 1.5, background: '#2563EB', color: '#FFFFFF', border: 'none', padding: '0.75rem', borderRadius: '10px', fontWeight: '700', cursor: submittingLeave ? 'not-allowed' : 'pointer' }}>{submittingLeave ? 'Submitting...' : 'Submit Application'}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
 };
 
-const StatCard = ({ title, value, icon, iconBg, valueColor = '#0F172A', onClick, linkText = 'View all' }) => {
+const StatCard = ({ title, value, icon, iconBg, valueColor = '#0F172A', onClick, badgeText = 'View all' }) => {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -864,24 +978,24 @@ const StatCard = ({ title, value, icon, iconBg, valueColor = '#0F172A', onClick,
       onMouseLeave={() => setHovered(false)}
       style={{ 
         background: '#FFFFFF', 
-        borderRadius: '20px', 
-        padding: '1.5rem', 
+        borderRadius: '18px', 
+        padding: '1.35rem', 
         border: '1px solid #E2E8F0', 
         display: 'flex', 
         flexDirection: 'column', 
-        gap: '1.25rem', 
-        boxShadow: hovered ? 'var(--shadow-md)' : 'var(--shadow-sm)',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        gap: '1rem', 
+        boxShadow: hovered ? '0 10px 25px -5px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.05)',
+        transition: 'all 0.25s ease-out',
         transform: hovered ? 'translateY(-2px)' : 'none',
         cursor: 'pointer'
       }}
       onClick={onClick}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ 
-          width: '46px', 
-          height: '46px', 
-          borderRadius: '14px', 
+          width: '42px', 
+          height: '42px', 
+          borderRadius: '12px', 
           background: iconBg, 
           display: 'flex', 
           alignItems: 'center', 
@@ -890,22 +1004,18 @@ const StatCard = ({ title, value, icon, iconBg, valueColor = '#0F172A', onClick,
         }}>
           {icon}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-          <div style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.02em' }}>{title}</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: '800', color: valueColor, fontFamily: "'Outfit', sans-serif", margin: '0', lineHeight: '1.2' }}>
-            {value}
-          </div>
-        </div>
+        <span style={{ fontSize: '0.68rem', fontWeight: '700', color: '#3B82F6', background: '#EFF6FF', padding: '3px 8px', borderRadius: '6px' }}>
+          {badgeText}
+        </span>
       </div>
-      <div style={{ 
-        fontSize: '0.78rem', 
-        color: '#3B82F6', 
-        fontWeight: '700', 
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.25rem'
-      }}>
-        {linkText} <ChevronRight size={14} />
+
+      <div>
+        <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '0.2rem' }}>
+          {title}
+        </div>
+        <div style={{ fontSize: '1.65rem', fontWeight: '800', color: valueColor, fontFamily: "'Outfit', sans-serif", lineHeight: '1.2' }}>
+          {value}
+        </div>
       </div>
     </div>
   );
@@ -914,34 +1024,30 @@ const StatCard = ({ title, value, icon, iconBg, valueColor = '#0F172A', onClick,
 const ChartLegendItem = ({ color, label, count, total }) => {
   const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#475569', fontWeight: '600' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#475569', fontWeight: '600' }}>
         <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, display: 'inline-block' }}></span>
-        {label}
+        <span>{label}</span>
       </div>
       <div style={{ color: '#0F172A', fontWeight: '500' }}>
-        <span style={{ fontWeight: '700', marginRight: '0.4rem' }}>{count}</span>
-        <span style={{ color: '#94A3B8', fontSize: '0.75rem' }}>({percentage}%)</span>
+        <span style={{ fontWeight: '700', marginRight: '0.35rem' }}>{count}</span>
+        <span style={{ color: '#94A3B8', fontSize: '0.7rem' }}>({percentage}%)</span>
       </div>
     </div>
   );
 };
 
-const inputStyle = {
+const modalInputStyle = {
   width: '100%',
   background: '#F8FAFC', 
-  border: '1px solid #E2E8F0', 
+  border: '1px solid #CBD5E1', 
   borderRadius: '10px', 
   padding: '0.65rem 0.85rem', 
   color: '#0F172A', 
   outline: 'none', 
-  fontSize: '0.8rem',
+  fontSize: '0.85rem',
   fontWeight: '500',
-  fontFamily: "'Plus Jakarta Sans', sans-serif",
-  transition: 'border-color 0.2s',
-  ':focus': {
-    borderColor: '#3B82F6'
-  }
+  fontFamily: "'Plus Jakarta Sans', sans-serif"
 };
 
 export default StaffDashboard;

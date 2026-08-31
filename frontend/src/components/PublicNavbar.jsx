@@ -134,7 +134,7 @@ const PublicNavbar = () => {
                   <div className="matrix-step-item warning">
                     <div className="step-num">04</div>
                     <div>
-                      <div className="step-title">HR Manager Escalation Audit (Level 3)</div>
+                      <div className="step-title">HR Escalation Audit (Level 3)</div>
                       <div className="step-desc">Critical breach triggers HR oversight to enforce accountability & resolution.</div>
                     </div>
                   </div>

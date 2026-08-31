@@ -214,7 +214,7 @@ const DepartmentsPage = () => {
     d.manager.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const role = user?.role || 'HR Manager';
+  const role = user?.role || 'HR';
   const getInitials = (name) => {
     if (!name) return 'HR';
     const parts = name.trim().split(' ');

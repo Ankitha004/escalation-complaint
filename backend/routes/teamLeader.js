@@ -26,7 +26,8 @@ router.route('/complaints/:id/status')
   .put(updateTLComplaintStatus);
 
 router.route('/complaints/:id/comment')
-  .post(addTLComment);
+  .post(addTLComment)
+  .put(addTLComment);
 
 router.route('/complaints/:id/resolve-report')
   .post(submitResolutionReport);

@@ -183,10 +183,8 @@ const AuthPage = () => {
     }
   ];
 
-  // Departments list for registration dropdown
   const departments = [
     'IT & Software',
-    'Human Resources',
     'Operations & Facilities',
     'Finance & Accounting',
     'Sales & Marketing',

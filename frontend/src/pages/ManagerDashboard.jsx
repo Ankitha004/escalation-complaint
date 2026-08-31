@@ -33,7 +33,14 @@ import {
   ArrowRight,
   Eye,
   BarChart3,
-  AlertCircle
+  AlertCircle,
+  FolderOpen,
+  Users,
+  Award,
+  Sparkles,
+  Sliders,
+  UserCheck,
+  Building
 } from 'lucide-react';
 
 ChartJS.register(
@@ -249,43 +256,28 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
 
       <main style={{ flex: 1, padding: '2rem', overflowY: 'auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-        {/* HEADER BAR */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '1.5rem' }}>
+        {/* EXECUTIVE HEADER BAR */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid #E2E8F0', paddingBottom: '1.25rem' }}>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: '#FFF7ED', color: '#EA580C', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800', marginBottom: '0.5rem', border: '1px solid #FED7AA' }}>
-              <ShieldAlert size={14} /> Department Manager
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: 0 }}>
+                {activeTab === 'leaves' ? 'Leave Approval Center' : `${departmentName || 'Department'} Executive Control Center`}
+              </h1>
+              <span style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', fontSize: '0.75rem', fontWeight: '700', padding: '0.25rem 0.75rem', borderRadius: '20px' }}>
+                Department Manager View
+              </span>
             </div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: '0 0 0.25rem 0' }}>
-              {activeTab === 'leaves' ? 'Leave Approval Center' : 'Department Manager Dashboard'}
-            </h1>
-            <p style={{ color: '#64748B', fontSize: '0.9rem', margin: 0 }}>
-              Department overview for <strong style={{ color: '#0F172A' }}>{user?.designation || 'Department Manager'}</strong>{departmentName ? <> | <strong style={{ color: '#EA580C' }}>{departmentName}</strong></> : ''}
+            <p style={{ color: '#64748B', fontSize: '0.9rem', margin: '0.35rem 0 0' }}>
+              Real-time department complaint surveillance, Team Leader performance, SLA compliance, and leave management.
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748B', fontSize: '0.85rem', fontWeight: '600', background: '#F8FAFC', padding: '0.5rem 1rem', borderRadius: '8px' }}>
-              <CalendarDays size={16} /> {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-            </div>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <button 
               onClick={() => { fetchManagerComplaints(); fetchLeaves(); }}
-              style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: '0.5rem', 
-                background: '#FFFFFF', 
-                color: '#475569', 
-                border: '1px solid #E2E8F0', 
-                padding: '0.5rem 1rem', 
-                borderRadius: '8px', 
-                fontWeight: '700', 
-                fontSize: '0.85rem', 
-                cursor: 'pointer', 
-                transition: 'all 0.2s ease',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-              }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: '#FFFFFF', color: '#475569', border: '1px solid #E2E8F0', padding: '0.65rem 1rem', borderRadius: '12px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
             >
-              <RefreshCw size={14} className={loading || loadingLeaves ? 'spin-icon' : ''} /> Refresh
+              <RefreshCw size={15} style={{ animation: (loading || loadingLeaves) ? 'spin 1s linear infinite' : 'none' }} /> Sync
             </button>
           </div>
         </div>
@@ -391,93 +383,140 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
               </div>
             )}
 
-            {/* WELCOME BANNER */}
-            {isOverview && (
-              <div style={{ 
-                background: 'linear-gradient(135deg, #FFFBF0 0%, #FFF3D6 50%, #FDE8C9 100%)', 
-                borderRadius: '16px', 
-                padding: '2rem 3rem', 
-                border: '1px solid #FDE68A',
-                position: 'relative',
-                overflow: 'hidden'
-              }}>
-                <div style={{ position: 'relative', zIndex: 2, maxWidth: '65%' }}>
-                  <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#1E293B', margin: '0 0 0.5rem 0', fontFamily: "'Outfit', sans-serif" }}>
-                    Welcome back, {userName}! 👋
-                  </h1>
-                  <p style={{ color: '#64748B', fontSize: '0.92rem', margin: 0 }}>
-                    Monitor your department's complaints, Team Leader performance, SLA compliance and escalations.
-                  </p>
+            {/* EXECUTIVE KPI TILES */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+              
+              {/* TOTAL DEPT COMPLAINTS */}
+              <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FolderOpen size={22}/>
                 </div>
-                {/* Decorative SVG */}
-                <svg style={{ position: 'absolute', right: 0, top: 0, height: '100%', opacity: 0.7 }} viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M400 0H200C250 50 200 150 150 200H400V0Z" fill="#FBBF24" fillOpacity="0.15"/>
-                  <circle cx="320" cy="80" r="40" fill="#F59E0B" fillOpacity="0.1" />
-                  <rect x="260" y="120" width="120" height="60" rx="8" fill="#FFFFFF" fillOpacity="0.6" />
-                  <path d="M280 140H360M280 160H320" stroke="#F59E0B" strokeWidth="4" strokeLinecap="round" />
-                </svg>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>DEPARTMENT COMPLAINTS</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
+                    {stats.totalComplaints}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#2563EB', fontWeight: '600', marginTop: '2px' }}>
+                    {stats.pendingReview} pending review
+                  </div>
+                </div>
+              </div>
+
+              {/* RESOLVED TICKETS */}
+              <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <CheckCircle2 size={22}/>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>RESOLVED & CLEARED</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#10B981', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
+                    {stats.resolved}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: '600', marginTop: '2px' }}>
+                    {stats.totalComplaints > 0 ? Math.round((stats.resolved / stats.totalComplaints) * 100) : 100}% clearance rate
+                  </div>
+                </div>
+              </div>
+
+              {/* ESCALATED TICKETS */}
+              <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <ShieldAlert size={22}/>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>ESCALATED & AT RISK</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#DC2626', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
+                    {stats.escalatedToManager}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#DC2626', fontWeight: '600', marginTop: '2px' }}>
+                    {stats.slaAtRisk} SLA at risk
+                  </div>
+                </div>
+              </div>
+
+              {/* PENDING LEAVES */}
+              <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <CalendarDays size={22}/>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>PENDING LEAVES</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#D97706', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
+                    {leavesList.filter(l => l.status && l.status.startsWith('Pending')).length}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#D97706', fontWeight: '600', marginTop: '2px' }}>
+                    {leavesList.length} total leave requests
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* QUICK COMMAND CENTER SHORTCUTS */}
+            {isOverview && (
+              <div>
+                <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Sparkles size={16} color="#2563EB" /> Quick Command Shortcuts
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.85rem' }}>
+                  
+                  <button 
+                    onClick={() => navigate('/manager-complaints')}
+                    style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '1rem', textAlign: 'left', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15,23,42,0.02)' }}
+                  >
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                      <FolderOpen size={18} />
+                    </div>
+                    <div style={{ fontWeight: '800', fontSize: '0.85rem', color: '#0F172A' }}>Dept Complaints</div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Department tickets</div>
+                  </button>
+
+                  <button 
+                    onClick={() => navigate('/manager-performance')}
+                    style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '1rem', textAlign: 'left', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15,23,42,0.02)' }}
+                  >
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF9C3', color: '#854D0E', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                      <Award size={18} />
+                    </div>
+                    <div style={{ fontWeight: '800', fontSize: '0.85rem', color: '#0F172A' }}>TL Performance</div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Team Leader metrics</div>
+                  </button>
+
+                  <button 
+                    onClick={() => navigate('/manager-sla')}
+                    style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '1rem', textAlign: 'left', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15,23,42,0.02)' }}
+                  >
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                      <Clock size={18} />
+                    </div>
+                    <div style={{ fontWeight: '800', fontSize: '0.85rem', color: '#0F172A' }}>SLA Analytics</div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Department countdowns</div>
+                  </button>
+
+                  <button 
+                    onClick={() => navigate('/manager-leaves')}
+                    style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '1rem', textAlign: 'left', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15,23,42,0.02)' }}
+                  >
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                      <CalendarDays size={18} />
+                    </div>
+                    <div style={{ fontWeight: '800', fontSize: '0.85rem', color: '#0F172A' }}>Leave Approvals</div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Staff leave requests</div>
+                  </button>
+
+                  <button 
+                    onClick={() => navigate('/manager-resolved')}
+                    style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '1rem', textAlign: 'left', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15,23,42,0.02)' }}
+                  >
+                    <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <div style={{ fontWeight: '800', fontSize: '0.85rem', color: '#0F172A' }}>Resolved History</div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Closed department tickets</div>
+                  </button>
+
+                </div>
               </div>
             )}
-
-            {/* TOP STATISTICS CARDS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem' }}>
-              
-              <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700' }}>Total Dept. Complaints</span>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ListTodo size={16} />
-                  </div>
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#2563EB', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>{stats.totalComplaints}</div>
-                <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '0.35rem' }}>All department complaints</span>
-              </div>
-
-              <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700' }}>Pending Review</span>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Clock size={16} />
-                  </div>
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#D97706', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>{stats.pendingReview}</div>
-                <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '0.35rem' }}>Awaiting manager action</span>
-              </div>
-
-              <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700' }}>Escalated to Manager</span>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <AlertTriangle size={16} />
-                  </div>
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#DC2626', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>{stats.escalatedToManager}</div>
-                <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '0.35rem' }}>TL SLA breached</span>
-              </div>
-
-              <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700' }}>SLA At Risk</span>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <AlertCircle size={16} />
-                  </div>
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#EA580C', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>{stats.slaAtRisk}</div>
-                <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '0.35rem' }}>Approaching deadline</span>
-              </div>
-
-              <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700' }}>Resolved / Closed</span>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F0FDF4', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <CheckCircle2 size={16} />
-                  </div>
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#16A34A', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>{stats.resolved}</div>
-                <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '0.35rem' }}>Successfully closed</span>
-              </div>
-
-            </div>
 
             {/* ANALYTICS CHARTS ROW — Only on overview */}
             {isOverview && (

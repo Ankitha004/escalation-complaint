@@ -78,9 +78,7 @@ const RaiseComplaint = () => {
   }, [category, priority, subject, description]);
 
   // Step 2: Attachments State
-  const [attachments, setAttachments] = useState([
-    { name: 'erp_error_screenshot.png', size: '1.2 MB', type: 'image/png' }
-  ]);
+  const [attachments, setAttachments] = useState([]);
   const [dragActive, setDragActive] = useState(false);
 
   // Step 3: Confirmation State
@@ -92,7 +90,7 @@ const RaiseComplaint = () => {
   const [successMsg, setSuccessMsg] = useState('');
 
   // Image Preview Modal
-  const [previewImage, setPreviewImage] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
 
   // Cancel Modal State
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -670,7 +668,7 @@ const RaiseComplaint = () => {
                             {att.preview && (
                               <button
                                 type="button"
-                                onClick={() => setPreviewImage(att.preview)}
+                                onClick={() => setPreviewFile(att)}
                                 style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8', padding: '0.35rem 0.75rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
                               >
                                 <Eye size={15} /> View
@@ -998,19 +996,116 @@ const RaiseComplaint = () => {
 
       </main>
 
-      {/* FULL SCREEN IMAGE PREVIEW MODAL */}
-      {previewImage && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-          <div style={{ position: 'relative', maxWidth: '90%', maxHeight: '90%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <button
-              onClick={() => setPreviewImage(null)}
-              style={{ position: 'absolute', top: '-40px', right: '0', background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFF', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background 0.2s' }}
-              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.4)'}
-              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-            >
-              <X size={20} />
-            </button>
-            <img src={previewImage} alt="Attachment Preview" style={{ maxWidth: '100%', maxHeight: '85vh', borderRadius: '8px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} />
+      {/* ATTACHMENT IMAGE PREVIEW MODAL */}
+      {previewFile && (
+        <div 
+          onClick={(e) => { if (e.target === e.currentTarget) setPreviewFile(null); }}
+          style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            background: 'rgba(15, 23, 42, 0.75)', 
+            zIndex: 9999, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            backdropFilter: 'blur(6px)',
+            padding: '1.5rem'
+          }}
+        >
+          <div 
+            style={{ 
+              background: '#FFFFFF', 
+              borderRadius: '20px', 
+              width: '100%', 
+              maxWidth: '750px', 
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.35)', 
+              border: '1px solid #E2E8F0', 
+              display: 'flex', 
+              flexDirection: 'column', 
+              overflow: 'hidden',
+              animation: 'fadeIn 0.2s ease-out'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.25rem 1.5rem', borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #BFDBFE' }}>
+                  <Eye size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif" }}>Attachment Preview</h3>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748B', maxWidth: '350px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {previewFile.name || 'Image Preview'} {previewFile.size ? `• ${previewFile.size}` : ''}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPreviewFile(null)}
+                style={{ 
+                  background: '#F1F5F9', 
+                  border: '1px solid #CBD5E1', 
+                  color: '#475569', 
+                  width: '32px', 
+                  height: '32px', 
+                  borderRadius: '50%', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.borderColor = '#FCA5A5'; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#475569'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body: Crisp Image Canvas */}
+            <div style={{ padding: '1.5rem', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '260px', maxHeight: '65vh', overflow: 'auto' }}>
+              <img 
+                src={previewFile.preview || previewFile} 
+                alt={previewFile.name || "Attachment Preview"} 
+                style={{ 
+                  maxWidth: '100%', 
+                  maxHeight: '60vh', 
+                  objectFit: 'contain', 
+                  borderRadius: '8px', 
+                  border: '1px solid #CBD5E1',
+                  background: '#FFFFFF',
+                  display: 'block'
+                }} 
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', borderTop: '1px solid #E2E8F0', background: '#FFFFFF' }}>
+              <span style={{ fontSize: '0.8rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <Paperclip size={14} style={{ color: '#2563EB' }} /> {previewFile.name || 'Attached file'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewFile(null)}
+                style={{ 
+                  padding: '0.5rem 1.25rem', 
+                  borderRadius: '10px', 
+                  border: 'none', 
+                  background: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)', 
+                  color: '#FFFFFF', 
+                  fontWeight: '700', 
+                  fontSize: '0.85rem', 
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(37,99,235,0.25)'
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

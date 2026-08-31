@@ -7,17 +7,28 @@ const { getSlaThresholdMinutes } = require('../services/escalationService');
 
 // Helper: Check if Manager is authorized for this complaint
 const isAuthorizedForComplaint = async (user, complaint) => {
-  if (user.role === 'Super Admin') return true;
+  if (!user) return false;
+  if (['Super Admin', 'Manager', 'HR'].includes(user.role)) return true;
   
-  if (complaint.departmentManager && complaint.departmentManager.toString() === user._id.toString()) {
+  const managerId = complaint.departmentManager?._id 
+    ? complaint.departmentManager._id.toString() 
+    : complaint.departmentManager?.toString();
+  if (managerId && managerId === user._id.toString()) {
     return true;
   }
   
-  if (complaint.responsibleDepartment) {
-    if (user.department && user.department.toString() === complaint.responsibleDepartment.toString()) {
+  const complaintDeptId = complaint.responsibleDepartment?._id 
+    ? complaint.responsibleDepartment._id.toString() 
+    : complaint.responsibleDepartment?.toString();
+  const userDeptId = user.department?._id 
+    ? user.department._id.toString() 
+    : user.department?.toString();
+
+  if (complaintDeptId) {
+    if (userDeptId && userDeptId === complaintDeptId) {
       return true;
     }
-    const managedDept = await Department.findOne({ _id: complaint.responsibleDepartment, manager: user._id });
+    const managedDept = await Department.findOne({ _id: complaintDeptId, manager: user._id });
     if (managedDept) return true;
   }
   return false;

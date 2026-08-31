@@ -51,7 +51,6 @@ const PendingRegistrations = () => {
   const departments = [
     'All Departments',
     'IT & Technology',
-    'Human Resources',
     'Finance & Accounts',
     'Operations & Logistics',
     'Sales & Marketing',
@@ -175,7 +174,7 @@ const PendingRegistrations = () => {
   });
 
   const userName = user?.name ? user.name.split(' ')[0] : 'Priya';
-  const role = user?.role || 'HR Manager';
+  const role = user?.role || 'HR';
   const getInitials = (name) => {
     if (!name) return 'HR';
     const parts = name.trim().split(' ');

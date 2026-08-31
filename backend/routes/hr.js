@@ -14,6 +14,11 @@ const {
   rejectRegistration,
   getMyStaff,
   getHRComplaints,
+  getHRComplaintById,
+  updateHRComplaintStatus,
+  addHRComment,
+  submitHRResolutionReport,
+  escalateHRComplaintToSuperAdmin,
   getSalaries,
   updateSalary
 } = require('../controllers/hrController');
@@ -32,6 +37,21 @@ router.route('/stats')
 // Complaints for HR Review
 router.route('/complaints')
   .get(authorize('HR', 'Super Admin'), getHRComplaints);
+
+router.route('/complaints/:id')
+  .get(authorize('HR', 'Super Admin'), getHRComplaintById);
+
+router.route('/complaints/:id/status')
+  .put(authorize('HR', 'Super Admin'), updateHRComplaintStatus);
+
+router.route('/complaints/:id/comment')
+  .post(authorize('HR', 'Super Admin'), addHRComment);
+
+router.route('/complaints/:id/resolve-report')
+  .post(authorize('HR', 'Super Admin'), submitHRResolutionReport);
+
+router.route('/complaints/:id/escalate')
+  .put(authorize('HR', 'Super Admin'), escalateHRComplaintToSuperAdmin);
 
 // Team Leaders Management
 router.route('/team-leaders')

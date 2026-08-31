@@ -12,7 +12,8 @@ import {
   LogOut,
   CalendarDays,
   User,
-  DollarSign
+  DollarSign,
+  FileText
 } from 'lucide-react';
 
 const HRSidebar = ({ activeTab = 'dashboard', badgeCount = 0 }) => {
@@ -95,6 +96,9 @@ const HRSidebar = ({ activeTab = 'dashboard', badgeCount = 0 }) => {
             HR MODULE
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            <button onClick={() => navigate('/hr-complaints')} style={navButtonStyle(activeTab === 'hr-complaints')}>
+              <FileText size={18} /> <span>Complaint Management</span>
+            </button>
             <button onClick={() => navigate('/pending-registrations')} style={{...navButtonStyle(activeTab === 'pending-registrations'), justifyContent: 'space-between'}}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                 <UserCheck size={18} /> <span>Pending Registrations</span>
