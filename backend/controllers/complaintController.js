@@ -9,10 +9,12 @@ const { createNotification } = require('../services/notificationService');
 
 // Helper to add escalation deadline to a complaint
 const addEscalationDeadline = (complaint) => {
+  if (!complaint) return null;
   const allowedMinutes = getSlaThresholdMinutes(complaint.priority || 'Medium');
-  const createdAt = complaint.createdAt || new Date();
+  const createdAt = new Date(complaint.createdAt || new Date());
   const deadline = new Date(createdAt.getTime() + allowedMinutes * 60000);
-  return { ...complaint.toObject(), escalationDeadline: deadline };
+  const plainObj = typeof complaint.toObject === 'function' ? complaint.toObject() : complaint;
+  return { ...plainObj, escalationDeadline: deadline };
 };
 
 // Helper function to auto-generate Complaint ID (e.g. CMP0001, CMP0002)
@@ -179,20 +181,45 @@ const createComplaint = async (req, res, next) => {
 const getMyComplaints = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const staffEmpId = req.user.employeeId;
+    const staffEmpId = req.user.employeeId || '';
+    const userRole = req.user.role || 'Staff';
 
-    const complaints = await Complaint.find({
-      $or: [
-        { createdBy: userId },
-        { createdBy: userId.toString() },
-        { staffId: staffEmpId }
-      ]
-    }).sort({ createdAt: -1 });
+    let query = {};
+    if (['Super Admin', 'HR', 'Manager'].includes(userRole)) {
+      query = {}; // Administrative roles can view all complaints in tracking
+    } else if (userRole === 'Team Leader') {
+      query = {
+        $or: [
+          { assignedTeamLeader: userId },
+          { teamLeader: staffEmpId },
+          { createdBy: userId },
+          { staffId: staffEmpId }
+        ]
+      };
+    } else {
+      query = {
+        $or: [
+          { createdBy: userId },
+          { createdBy: userId.toString() },
+          { staffId: staffEmpId },
+          { staffId: { $regex: new RegExp(`^${staffEmpId}$`, 'i') } }
+        ]
+      };
+    }
+
+    const complaints = await Complaint.find(query)
+      .sort({ createdAt: -1 })
+      .populate('createdBy', 'name employeeId department designation email phone')
+      .populate('assignedTo', 'name employeeId role')
+      .populate('assignedTeamLeader', 'name employeeId role')
+      .populate('departmentManager', 'name employeeId role')
+      .populate('responsibleDepartment', 'name')
+      .lean();
 
     const totalComplaints = complaints.length;
     const pendingComplaints = complaints.filter(c => c.status === 'Pending' || c.status === 'Submitted').length;
-    const inProgressComplaints = complaints.filter(c => c.status === 'In Progress').length;
-    const resolvedComplaints = complaints.filter(c => c.status === 'Resolved' || c.status === 'Closed').length;
+    const inProgressComplaints = complaints.filter(c => c.status === 'In Progress' || c.status === 'Escalated' || c.status === 'Waiting on User').length;
+    const resolvedComplaints = complaints.filter(c => c.status === 'Resolved' || c.status === 'Closed' || c.status === 'Approved').length;
 
     res.json({
       complaints: complaints.map(addEscalationDeadline),

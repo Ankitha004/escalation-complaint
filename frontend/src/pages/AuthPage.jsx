@@ -158,7 +158,7 @@ const AuthPage = () => {
       title: 'Staff',
       icon: User,
       color: '#6366F1',
-      defaultEmpId: 'STAFF1001'
+      defaultEmpId: 'EMP3833'
     },
     {
       id: 'HR',
@@ -172,7 +172,7 @@ const AuthPage = () => {
       title: 'Team Leader',
       icon: Crown,
       color: '#F59E0B',
-      defaultEmpId: 'TL2001'
+      defaultEmpId: 'TL001'
     },
     {
       id: 'Manager',
@@ -194,6 +194,9 @@ const AuthPage = () => {
   // Role Selection Handler
   const handleRoleSelect = (roleItem) => {
     setSelectedRole(roleItem.id);
+    if (roleItem.defaultEmpId) {
+      setLoginEmployeeId(roleItem.defaultEmpId);
+    }
     setError('');
   };
 

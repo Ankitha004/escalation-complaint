@@ -137,8 +137,16 @@ mongoose.connection.on('error', err => {
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.warn('⚠️ MongoDB Disconnected.');
   dbReady = false;
+  // Automatically attempt reconnect on connection drop
+  if (mongoose.connection.readyState === 0) {
+    setTimeout(() => {
+      mongoose.connect(process.env.MONGO_URI, {
+        serverSelectionTimeoutMS: 15000,
+        connectTimeoutMS: 15000,
+      }).catch(e => console.warn('Reconnect notice:', e.message));
+    }, 2000);
+  }
 });
 
 mongoose.connection.on('connected', () => {

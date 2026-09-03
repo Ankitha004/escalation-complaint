@@ -37,8 +37,7 @@ const TLSidebar = ({ activeTab = 'dashboard' }) => {
     {
       title: 'COMPLAINTS',
       items: [
-        { id: 'assigned', label: 'Assigned Complaints', path: '/tl-assigned-complaints', icon: FileSearch },
-        { id: 'complaints', label: 'All Team Complaints', path: '/tl-all-complaints', icon: List },
+        { id: 'complaints', label: 'Team Complaints', path: '/tl-complaints', icon: List },
         { id: 'sla', label: 'Escalated Complaints', path: '/tl-escalated-complaints', icon: TrendingUp },
         { id: 'tl-reports', label: 'Reports', path: '/tl-reports', icon: BarChart2 }
       ]
@@ -104,6 +103,7 @@ const TLSidebar = ({ activeTab = 'dashboard' }) => {
                 const isDashboardRoute = location.pathname === '/dashboard';
                 const isActive = location.pathname === item.path || 
                   (isDashboardRoute && item.id === 'dashboard' && (activeTab === 'dashboard' || activeTab === 'overview')) ||
+                  (item.id === 'complaints' && (['assigned', 'complaints'].includes(activeTab) || ['/tl-assigned-complaints', '/tl-all-complaints', '/tl-complaints'].includes(location.pathname))) ||
                   (activeTab === item.id);
 
                 return (

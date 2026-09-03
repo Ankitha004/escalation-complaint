@@ -37,11 +37,10 @@ const TrackComplaint = () => {
       const res = await API.get('/complaints/my');
       const data = res.data || {};
       const list = data.complaints || (Array.isArray(data) ? data : []);
-      if (list.length > 0) {
-        setComplaints(list);
-      }
+      setComplaints(list);
     } catch (err) {
       console.warn('Fetch my complaints notice:', err);
+      setComplaints([]);
     } finally {
       setLoading(false);
     }
