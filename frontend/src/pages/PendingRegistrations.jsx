@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import HRSidebar from '../components/HRSidebar';
 import SuperAdminSidebar from '../components/SuperAdminSidebar';
 import API from '../services/api';
+import { getDesignationsForDepartment } from '../utils/designationUtils';
 import { 
   Menu,
   CalendarDays,
@@ -472,8 +473,13 @@ const PendingRegistrations = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Designation</label>
-                <input type="text" placeholder="e.g. Staff Associate" value={assignedDesignation} onChange={(e) => setAssignedDesignation(e.target.value)} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Designation *</label>
+                <select value={assignedDesignation} onChange={(e) => setAssignedDesignation(e.target.value)} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none', background: '#FFF' }}>
+                  <option value="">Select Designation for {selectedReg?.department || 'Department'}...</option>
+                  {getDesignationsForDepartment(selectedReg?.department).map((desig) => (
+                    <option key={desig} value={desig}>{desig}</option>
+                  ))}
+                </select>
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
@@ -501,18 +507,38 @@ const PendingRegistrations = () => {
               <button onClick={() => setShowQuickRejectModal(false)} style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
-            <form onSubmit={handleQuickRejectSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <form onSubmit={handleQuickRejectSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div style={{ background: '#FEF2F2', padding: '1rem', borderRadius: '12px', border: '1px solid #FCA5A5', fontSize: '0.85rem', color: '#991B1B' }}>
                 Reject registration for applicant <strong>{selectedReg.name}</strong>.
               </div>
 
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Rejection Reason (min 10 characters) *</label>
-                <textarea required rows={3} placeholder="Provide details for rejection..." value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none', fontFamily: 'inherit', resize: 'vertical' }} />
+                <textarea
+                  rows={3}
+                  placeholder="Provide details for rejection..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: rejectionReason && rejectionReason.trim().length < 10 ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    resize: 'vertical'
+                  }}
+                />
+                {rejectionReason && rejectionReason.trim().length < 10 && (
+                  <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>
+                    Rejection reason must be at least 10 characters ({rejectionReason.trim().length}/10).
+                  </span>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button type="submit" disabled={submitting || rejectionReason.trim().length < 10} style={{ flex: 1, background: '#EF4444', color: '#FFF', border: 'none', padding: '0.75rem', borderRadius: '8px', fontWeight: '700', fontSize: '0.85rem', cursor: submitting || rejectionReason.trim().length < 10 ? 'not-allowed' : 'pointer' }}>
+                <button type="submit" disabled={submitting} style={{ flex: 1, background: '#EF4444', color: '#FFF', border: 'none', padding: '0.75rem', borderRadius: '8px', fontWeight: '700', fontSize: '0.85rem', cursor: submitting ? 'not-allowed' : 'pointer' }}>
                   {submitting ? 'Rejecting...' : 'Reject Request'}
                 </button>
                 <button type="button" onClick={() => setShowQuickRejectModal(false)} style={{ flex: 1, background: '#F8FAFC', color: '#475569', border: '1px solid #E2E8F0', padding: '0.75rem', borderRadius: '8px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}>

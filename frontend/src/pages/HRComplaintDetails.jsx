@@ -22,8 +22,13 @@ import {
   Calendar,
   User,
   Building2,
-  AlertTriangle
+  AlertTriangle,
+  Edit2,
+  Check,
+  X,
+  Award
 } from 'lucide-react';
+import ResolutionCertificateModal from '../components/ResolutionCertificateModal';
 
 const HRComplaintDetails = () => {
   const { user } = useContext(AuthContext);
@@ -33,6 +38,7 @@ const HRComplaintDetails = () => {
   const [complaint, setComplaint] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showCertModal, setShowCertModal] = useState(false);
 
   // Actions State
   const [status, setStatus] = useState('');
@@ -43,16 +49,44 @@ const HRComplaintDetails = () => {
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
 
+  // Comment Edit State (15 min window)
+  const [editingCommentIndex, setEditingCommentIndex] = useState(null);
+  const [editingText, setEditingText] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const handleSaveEditComment = async (idx) => {
+    if (!editingText.trim()) return;
+    setSavingEdit(true);
+    try {
+      const res = await API.put(`/hr/complaints/${id}/comments/${idx}`, {
+        message: editingText.trim()
+      });
+      setComplaint(res.data);
+      setEditingCommentIndex(null);
+      setEditingText('');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to edit comment. The 15-minute edit window may have expired.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const fetchComplaint = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await API.get(`/hr/complaints/${id}`);
+      let res;
+      try {
+        res = await API.get(`/hr/complaints/${id}`);
+      } catch (hrErr) {
+        // Fallback to main complaint route if /hr/complaints/:id route fails
+        res = await API.get(`/complaints/${id}`);
+      }
       setComplaint(res.data);
       if (res.data) setStatus(res.data.status);
     } catch (err) {
       console.error('Fetch HR complaint error:', err);
-      setError('Unable to load complaint details. Please try again.');
+      setError(err.response?.data?.message || 'Complaint record not found or has been removed.');
     } finally {
       setLoading(false);
     }
@@ -109,15 +143,27 @@ const HRComplaintDetails = () => {
     );
   }
 
-  if (error) {
+  if (error || !complaint) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#F8FAFC' }}>
         <Navbar activeTabTitle="HR Complaint Management" />
-        <div style={{ padding: '2rem 2.5rem', maxWidth: '1280px', width: '100%', margin: '0 auto' }}>
-          <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 2px 4px rgba(220,38,38,0.1)' }}>
-            <AlertTriangle size={32} style={{ margin: '0 auto 0.5rem auto' }} />
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '800', margin: '0 0 0.5rem 0' }}>Access Error</h3>
-            <p style={{ margin: 0 }}>{error}</p>
+        <div style={{ padding: '4rem 2rem', maxWidth: '600px', width: '100%', margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '2.5rem', borderRadius: '16px', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
+            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto' }}>
+              <AlertTriangle size={30} />
+            </div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: '0 0 0.5rem 0' }}>Complaint Not Found</h3>
+            <p style={{ color: '#64748B', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.4' }}>
+              {error || 'The requested complaint ticket could not be located or may have been deleted.'}
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button onClick={() => navigate('/hr-complaints')} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2563EB', color: '#FFFFFF', padding: '0.75rem 1.25rem', borderRadius: '10px', fontWeight: '700', fontSize: '0.85rem', border: 'none', cursor: 'pointer' }}>
+                <ArrowLeft size={16} /> Return to HR Complaints List
+              </button>
+              <button onClick={() => navigate('/hr-dashboard')} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#F1F5F9', color: '#475569', padding: '0.75rem 1.25rem', borderRadius: '10px', fontWeight: '700', fontSize: '0.85rem', border: '1px solid #CBD5E1', cursor: 'pointer' }}>
+                Go to Dashboard
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -212,6 +258,29 @@ const HRComplaintDetails = () => {
                 {complaint.subject}
               </h2>
             </div>
+
+            {isResolved && (
+              <button
+                type="button"
+                onClick={() => setShowCertModal(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, #1E3A8A 0%, #0F172A 100%)',
+                  color: '#FFFFFF',
+                  border: '1px solid #D97706',
+                  padding: '0.65rem 1.25rem',
+                  borderRadius: '10px',
+                  fontSize: '0.85rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(15, 23, 42, 0.2)'
+                }}
+              >
+                <Award size={18} color="#F59E0B" /> Official Resolution Certificate
+              </button>
+            )}
           </div>
         </div>
 
@@ -288,22 +357,69 @@ const HRComplaintDetails = () => {
                     No communication recorded yet.
                   </div>
                 ) : (
-                  complaint.comments.map((comm, idx) => (
-                    <div key={idx} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                        <div>
-                          <strong style={{ fontSize: '0.95rem', color: '#0F172A' }}>{comm.senderName}</strong>
-                          <span style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700', marginLeft: '0.5rem' }}>
-                            {comm.senderRole}
-                          </span>
+                  complaint.comments.map((comm, idx) => {
+                    const commentTime = new Date(comm.createdAt || Date.now()).getTime();
+                    const minutesPassed = (Date.now() - commentTime) / (1000 * 60);
+                    const isMine = user && (user.name === comm.senderName || comm.senderRole === 'HR' || user.role === 'HR');
+                    const canEdit = isMine && minutesPassed <= 15;
+                    const isEditing = editingCommentIndex === idx;
+
+                    return (
+                      <div key={idx} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '1.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                          <div>
+                            <strong style={{ fontSize: '0.95rem', color: '#0F172A' }}>{comm.senderName}</strong>
+                            <span style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700', marginLeft: '0.5rem' }}>
+                              {comm.senderRole}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                              {comm.createdAt ? new Date(comm.createdAt).toLocaleString() : 'Recent'}
+                              {comm.isEdited && <em style={{ marginLeft: '0.4rem', color: '#475569', fontWeight: '700', fontStyle: 'normal' }}>(edited)</em>}
+                            </span>
+                            {canEdit && !isEditing && (
+                              <button
+                                onClick={() => { setEditingCommentIndex(idx); setEditingText(comm.message); }}
+                                style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#2563EB', borderRadius: '6px', padding: '3px 8px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                                title="Edit comment (available for 15 min after posting)"
+                              >
+                                <Edit2 size={12} /> Edit
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <span style={{ fontSize: '0.8rem', color: '#64748B' }}>
-                          {comm.createdAt ? new Date(comm.createdAt).toLocaleString() : 'Recent'}
-                        </span>
+
+                        {isEditing ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                            <input
+                              type="text"
+                              value={editingText}
+                              onChange={(e) => setEditingText(e.target.value)}
+                              style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '6px', border: '1px solid #2563EB', fontSize: '0.9rem', outline: 'none', background: '#FFF' }}
+                            />
+                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                              <button
+                                onClick={() => setEditingCommentIndex(null)}
+                                style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', color: '#475569', padding: '0.35rem 0.75rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer' }}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleSaveEditComment(idx)}
+                                disabled={savingEdit || !editingText.trim()}
+                                style={{ background: '#2563EB', border: 'none', color: '#FFF', padding: '0.35rem 0.85rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                              >
+                                <Check size={12} /> Save Edit
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p style={{ fontSize: '0.95rem', color: '#334155', margin: 0, lineHeight: '1.5' }}>{comm.message}</p>
+                        )}
                       </div>
-                      <p style={{ fontSize: '0.95rem', color: '#334155', margin: 0, lineHeight: '1.5' }}>{comm.message}</p>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
 
@@ -390,6 +506,24 @@ const HRComplaintDetails = () => {
                 <h3 style={{ fontSize: '1rem', fontWeight: '700', color: '#0F172A', marginBottom: '1.25rem' }}>
                   HR Action & Resolution
                 </h3>
+
+                {/* Forwarded Resolution Reports */}
+                {complaint.resolutionReports && complaint.resolutionReports.some(r => r.forwardedTo === 'HR') && (
+                  <div style={{ marginBottom: '1.5rem', background: '#EFF6FF', padding: '1.25rem', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: '700', color: '#1E40AF', margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <FileText size={16} /> Resolution Reports Pending Review
+                    </h4>
+                    <p style={{ fontSize: '0.8rem', color: '#1E3A8A', marginBottom: '1rem' }}>
+                      The following resolution reports have been submitted. Please review them before taking final action.
+                    </p>
+                    {complaint.resolutionReports.filter(r => r.forwardedTo === 'HR').map((report, idx) => (
+                      <div key={idx} style={{ background: '#FFF', padding: '1rem', borderRadius: '8px', border: '1px solid #93C5FD', marginBottom: '0.5rem' }}>
+                        <div style={{ fontSize: '0.8rem', color: '#1D4ED8', fontWeight: '700', marginBottom: '0.25rem' }}>Report by {report.solverName} ({report.solverRole})</div>
+                        <div style={{ fontSize: '0.9rem', color: '#0F172A' }}>{report.reportText}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {complaint.status === 'Submitted' || complaint.status === 'Pending' ? (
                   <button 
@@ -513,6 +647,14 @@ const HRComplaintDetails = () => {
         </div>
 
       </main>
+
+      {/* RESOLUTION CERTIFICATE PREVIEW MODAL */}
+      {showCertModal && complaint && (
+        <ResolutionCertificateModal
+          complaint={complaint}
+          onClose={() => setShowCertModal(false)}
+        />
+      )}
     </div>
   );
 };

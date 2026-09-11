@@ -315,7 +315,7 @@ const EmployeeDashboard = () => {
                 <h4 style={{ fontWeight: '800', color: '#0F172A', marginBottom: '0.5rem' }}>Today: {new Date().toLocaleDateString()}</h4>
 
                 <div style={{ margin: '1rem 0' }}>
-                  {myAttendance ? (
+                  {myAttendance && myAttendance.clockIn !== '--:--' ? (
                     <span className="status-chip status-chip-emerald" style={{ padding: '0.5rem 1.25rem', fontSize: '0.88rem' }}>
                       Clocked In at {myAttendance.clockIn} ({myAttendance.clockOut})
                     </span>
@@ -324,6 +324,11 @@ const EmployeeDashboard = () => {
                       Not Clocked In Yet
                     </span>
                   )}
+                </div>
+
+                <div style={{ background: '#FFFFFF', padding: '0.85rem 1.25rem', borderRadius: '12px', border: '1px solid #DCFCE7', margin: '1rem auto 1.5rem auto', maxWidth: '300px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#166534' }}>Total Days Attended:</span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#15803D' }}>{myAttendance?.totalDaysAttended || 0} Days</span>
                 </div>
 
                 <button

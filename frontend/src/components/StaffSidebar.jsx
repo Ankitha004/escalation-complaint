@@ -10,6 +10,7 @@ import {
   Clock,
   CalendarDays,
   Bell,
+  Megaphone,
   User,
   LogOut
 } from 'lucide-react';
@@ -28,14 +29,14 @@ const StaffSidebar = ({ activeTab = 'dashboard', unreadCount = 0 }) => {
 
   return (
     <aside style={{ 
-      width: '260px', 
-      background: '#090D16', 
+      width: '280px', 
+      background: 'linear-gradient(180deg, #0F172A 0%, #1E3A8A 100%)', 
       color: '#F9FAFB', 
       display: 'flex', 
       flexDirection: 'column', 
       flexShrink: 0, 
       minHeight: '100vh',
-      borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+      borderRight: '1px solid rgba(255, 255, 255, 0.08)',
       fontFamily: "'Plus Jakarta Sans', sans-serif"
     }}>
       
@@ -127,6 +128,13 @@ const StaffSidebar = ({ activeTab = 'dashboard', unreadCount = 0 }) => {
               }
             >
               Notifications
+            </SidebarLink>
+            <SidebarLink 
+              icon={Megaphone} 
+              isActive={activeTab === 'tl-announcements' || activeTab === 'announcements'} 
+              onClick={() => navigate('/announcements')}
+            >
+              Announcements
             </SidebarLink>
           </div>
         </div>

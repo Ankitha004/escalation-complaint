@@ -47,12 +47,14 @@ const TeamLeaderDashboard = ({ initialTab = 'overview' }) => {
   const [loading, setLoading] = useState(true);
   const [loadingStaff, setLoadingStaff] = useState(false);
   const [loadingLeaves, setLoadingLeaves] = useState(false);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   // States
   const [complaints, setComplaints] = useState([]);
   const [myStaff, setMyStaff] = useState([]);
   const [leavesList, setLeavesList] = useState([]);
+  const [teamAttendance, setTeamAttendance] = useState({ stats: {}, members: [] });
   const [stats, setStats] = useState({
     totalAssigned: 0,
     pending: 0,
@@ -128,6 +130,18 @@ const TeamLeaderDashboard = ({ initialTab = 'overview' }) => {
     }
   };
 
+  const fetchTeamAttendance = async () => {
+    setLoadingAttendance(true);
+    try {
+      const res = await API.get('/attendance/team');
+      setTeamAttendance(res.data || { stats: {}, members: [] });
+    } catch (err) {
+      console.error('Backend fetch error for team attendance:', err);
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
+
   const handleLeaveDecision = async (leaveId, decision) => {
     try {
       const res = await API.put(`/leaves/${leaveId}/status`, { status: decision });
@@ -142,6 +156,7 @@ const TeamLeaderDashboard = ({ initialTab = 'overview' }) => {
     fetchTLComplaints();
     fetchMyStaff();
     fetchLeaves();
+    fetchTeamAttendance();
   }, []);
 
   const safeComplaints = Array.isArray(complaints) ? complaints : [];
@@ -160,7 +175,7 @@ const TeamLeaderDashboard = ({ initialTab = 'overview' }) => {
     const matchesSearch = 
       (c.complaintId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.staffId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.staffName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.createdBy?.name || c.staffName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.subject || c.title || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = statusFilter === 'All Status' || c.status === statusFilter;
@@ -348,7 +363,7 @@ const TeamLeaderDashboard = ({ initialTab = 'overview' }) => {
                       filteredComplaints.map((c) => (
                         <tr key={c._id} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                           <td style={{ padding: '1rem 1.5rem', fontWeight: '700', color: '#2563EB' }}>{c.complaintId}</td>
-                          <td style={{ padding: '1rem', color: '#0F172A', fontWeight: '600' }}>{c.staffName}</td>
+                          <td style={{ padding: '1rem', color: '#0F172A', fontWeight: '600' }}>{c.createdBy?.name || c.staffName || 'Staff Member'}</td>
                           <td style={{ padding: '1rem', color: '#475569', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.subject}</td>
                           <td style={{ padding: '1rem' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: '700', color: c.priority === 'Critical' ? '#DC2626' : c.priority === 'High' ? '#EA580C' : '#64748B' }}>
@@ -390,19 +405,70 @@ const TeamLeaderDashboard = ({ initialTab = 'overview' }) => {
               
               {/* Today's Team Attendance */}
               <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '1.25rem 1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <CalendarX2 size={20} color="#0F172A" />
                     <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Today's Team Attendance</h3>
                   </div>
+                  <button 
+                    onClick={fetchTeamAttendance}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', fontWeight: '600' }}
+                  >
+                    <RefreshCw size={14} className={loadingAttendance ? 'spin-icon' : ''} /> Refresh
+                  </button>
                 </div>
-                
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem', textAlign: 'center', background: '#F8FAFC', borderRadius: '12px', border: '1px dashed #CBD5E1' }}>
-                  <Users size={32} color="#94A3B8" style={{ marginBottom: '0.75rem' }} />
-                  <h4 style={{ fontSize: '0.95rem', fontWeight: '700', color: '#0F172A', margin: '0 0 0.25rem 0' }}>Attendance monitoring is not currently available for your team.</h4>
-                  <p style={{ fontSize: '0.8rem', color: '#64748B', margin: 0, maxWidth: '80%' }}>
-                    The backend API for aggregating team attendance data is currently under development. Real data will appear here once supported.
-                  </p>
+
+                {/* Attendance Summary Stat Pills */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '80px', background: '#F8FAFC', padding: '0.5rem', borderRadius: '8px', border: '1px solid #E2E8F0', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.65rem', color: '#64748B', fontWeight: '700' }}>TOTAL</div>
+                    <div style={{ fontSize: '1rem', fontWeight: '800', color: '#0F172A' }}>{teamAttendance?.stats?.totalMembers || 0}</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: '80px', background: '#F0FDF4', padding: '0.5rem', borderRadius: '8px', border: '1px solid #DCFCE7', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.65rem', color: '#166534', fontWeight: '700' }}>PRESENT</div>
+                    <div style={{ fontSize: '1rem', fontWeight: '800', color: '#15803D' }}>{teamAttendance?.stats?.presentCount || 0}</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: '80px', background: '#FFFBEB', padding: '0.5rem', borderRadius: '8px', border: '1px solid #FEF3C7', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.65rem', color: '#92400E', fontWeight: '700' }}>NOT IN</div>
+                    <div style={{ fontSize: '1rem', fontWeight: '800', color: '#D97706' }}>{teamAttendance?.stats?.notClockedInCount || 0}</div>
+                  </div>
+                </div>
+
+                {/* Team Attendance List */}
+                <div style={{ flex: 1, overflowY: 'auto', maxHeight: '240px', paddingRight: '0.25rem' }}>
+                  {loadingAttendance ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#64748B' }}><RefreshCw size={20} className="spin-icon" /></div>
+                  ) : teamAttendance?.members?.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      {teamAttendance.members.map((item) => (
+                        <div key={item.employee._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.65rem 0.75rem', background: item.isClockedIn ? '#F0FDF4' : '#F8FAFC', borderRadius: '8px', border: `1px solid ${item.isClockedIn ? '#DCFCE7' : '#E2E8F0'}` }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: item.isClockedIn ? '#16A34A' : '#94A3B8', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: '800' }}>
+                              {item.employee?.name ? item.employee.name.substring(0, 2).toUpperCase() : 'EM'}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0F172A' }}>{item.employee?.name}</div>
+                              <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                                In: <strong style={{ color: '#0F172A' }}>{item.clockIn}</strong> {item.clockOut !== 'In Progress' && item.clockOut !== '--:--' && `| Out: ${item.clockOut}`}
+                              </div>
+                            </div>
+                          </div>
+                          <span style={{ 
+                            padding: '3px 8px', 
+                            borderRadius: '12px', 
+                            fontSize: '0.68rem', 
+                            fontWeight: '800',
+                            background: item.isClockedIn ? '#DCFCE7' : '#F1F5F9',
+                            color: item.isClockedIn ? '#15803D' : '#64748B'
+                          }}>
+                            {item.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#64748B', fontSize: '0.85rem' }}>No attendance records found for your team today.</div>
+                  )}
                 </div>
               </div>
 

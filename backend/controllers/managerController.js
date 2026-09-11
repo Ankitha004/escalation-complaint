@@ -2,13 +2,13 @@ const Complaint = require('../models/Complaint');
 const EscalationLog = require('../models/EscalationLog');
 const User = require('../models/User');
 const Department = require('../models/Department');
-const { createNotification } = require('../services/notificationService');
+const { createNotification, notifyHRAndSuperAdminOnResolution } = require('../services/notificationService');
 const { getSlaThresholdMinutes } = require('../services/escalationService');
 
 // Helper: Check if Manager is authorized for this complaint
 const isAuthorizedForComplaint = async (user, complaint) => {
   if (!user) return false;
-  if (['Super Admin', 'Manager', 'HR'].includes(user.role)) return true;
+  if (['Super Admin', 'HR'].includes(user.role)) return true;
   
   const managerId = complaint.departmentManager?._id 
     ? complaint.departmentManager._id.toString() 
@@ -288,6 +288,22 @@ const approveResolution = async (req, res, next) => {
     });
 
     const updated = await complaint.save();
+
+    if (updated.createdBy) {
+      await createNotification(
+        updated.createdBy,
+        `Your complaint (${updated.complaintId}) resolution has been approved by Department Manager ${req.user.name}.`,
+        updated._id
+      );
+    }
+    if (updated.assignedTeamLeader) {
+      await createNotification(
+        updated.assignedTeamLeader,
+        `Complaint (${updated.complaintId}) resolution approved by Manager ${req.user.name}.`,
+        updated._id
+      );
+    }
+
     res.json(updated);
   } catch (error) {
     next(error);
@@ -333,6 +349,22 @@ const closeComplaint = async (req, res, next) => {
     });
 
     const updated = await complaint.save();
+
+    if (updated.createdBy) {
+      await createNotification(
+        updated.createdBy,
+        `Your complaint (${updated.complaintId}) has been closed by Department Manager ${req.user.name}.`,
+        updated._id
+      );
+    }
+    if (updated.assignedTeamLeader) {
+      await createNotification(
+        updated.assignedTeamLeader,
+        `Complaint (${updated.complaintId}) has been closed by Manager ${req.user.name}.`,
+        updated._id
+      );
+    }
+
     res.json(updated);
   } catch (error) {
     next(error);
@@ -391,22 +423,22 @@ const updateManagerStatus = async (req, res, next) => {
 
     const updated = await complaint.save();
 
-    // Notify the staff and assigned team leader if resolved
+    if (updated.createdBy) {
+      await createNotification(
+        updated.createdBy,
+        `Your complaint (${updated.complaintId}) status was updated to "${updated.status}" by Manager ${req.user.name}.`,
+        updated._id
+      );
+    }
+    if (updated.assignedTeamLeader) {
+      await createNotification(
+        updated.assignedTeamLeader,
+        `Complaint ${updated.complaintId} status updated to "${updated.status}" by Manager ${req.user.name}.`,
+        updated._id
+      );
+    }
     if (status === 'Resolved') {
-      if (complaint.createdBy) {
-        await createNotification(
-          complaint.createdBy,
-          `Your complaint (${complaint.complaintId}) has been resolved by Department Manager ${req.user.name}.`,
-          complaint._id
-        );
-      }
-      if (complaint.assignedTeamLeader) {
-        await createNotification(
-          complaint.assignedTeamLeader,
-          `Complaint ${complaint.complaintId} has been resolved by Department Manager ${req.user.name}.`,
-          complaint._id
-        );
-      }
+      await notifyHRAndSuperAdminOnResolution(updated, req.user ? req.user.name : '');
     }
 
     res.json(updated);
@@ -464,6 +496,15 @@ const addManagerComment = async (req, res, next) => {
     });
 
     const updated = await complaint.save();
+
+    if (updated.createdBy) {
+      await createNotification(
+        updated.createdBy,
+        `Department Manager ${req.user.name} commented on your complaint #${updated.complaintId}.`,
+        updated._id
+      );
+    }
+
     res.json(updated);
   } catch (error) {
     next(error);
@@ -651,6 +692,7 @@ const submitManagerResolutionReport = async (req, res, next) => {
     });
 
     const updated = await complaint.save();
+    await notifyHRAndSuperAdminOnResolution(updated, req.user ? req.user.name : '');
     res.json({ message: 'Manager resolution report submitted successfully', complaint: updated });
   } catch (error) {
     next(error);
@@ -658,6 +700,7 @@ const submitManagerResolutionReport = async (req, res, next) => {
 };
 
 module.exports = {
+  isAuthorizedForComplaint,
   getMyDepartment,
   getManagerComplaints,
   getManagerComplaintById,

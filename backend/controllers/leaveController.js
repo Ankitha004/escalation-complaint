@@ -1,6 +1,7 @@
 const Leave = require('../models/Leave');
 const User = require('../models/User');
 const mongoose = require('mongoose');
+const { createNotification } = require('../services/notificationService');
 
 // @desc    Apply for leave
 // @route   POST /api/leaves
@@ -22,6 +23,20 @@ const applyLeave = async (req, res, next) => {
       reason,
       status: 'Pending Approval',
     });
+
+    // Notify employee applicant
+    await createNotification(
+      req.user._id,
+      `Your leave application for ${type} (${startDate} to ${endDate}) has been submitted for approval.`
+    );
+
+    // Notify Team Leader or Manager if assigned
+    if (req.user.teamLeader) {
+      await createNotification(
+        req.user.teamLeader,
+        `New leave application submitted by ${req.user.name} (${type}).`
+      );
+    }
 
     res.status(201).json({ message: 'Leave application submitted', leave });
   } catch (error) {
@@ -124,7 +139,56 @@ const updateLeaveStatus = async (req, res, next) => {
     leave.status = status;
     await leave.save();
 
+    // Notify employee applicant
+    if (leave.employee) {
+      await createNotification(
+        leave.employee,
+        `Your leave application (${leave.type}) has been ${status} by ${req.user.name} (${req.user.role}).`
+      );
+    }
+
     res.json({ message: `Leave status updated to ${status}`, leave });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get logged-in user's leave balance quotas
+// @route   GET /api/leaves/balances
+// @access  Private
+const getLeaveBalances = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const leaves = await Leave.find({ employee: userId, status: 'Approved' });
+
+    let casualUsed = 0;
+    let sickUsed = 0;
+    let earnedUsed = 0;
+
+    leaves.forEach(l => {
+      const start = new Date(l.startDate);
+      const end = new Date(l.endDate);
+      const diffDays = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1);
+      
+      const leaveType = (l.type || '').toLowerCase();
+      if (leaveType.includes('casual')) {
+        casualUsed += diffDays;
+      } else if (leaveType.includes('sick')) {
+        sickUsed += diffDays;
+      } else if (leaveType.includes('earned')) {
+        earnedUsed += diffDays;
+      } else {
+        casualUsed += diffDays;
+      }
+    });
+
+    const balances = {
+      casual: { allocated: 12, used: casualUsed, remaining: Math.max(0, 12 - casualUsed) },
+      sick: { allocated: 12, used: sickUsed, remaining: Math.max(0, 12 - sickUsed) },
+      earned: { allocated: 15, used: earnedUsed, remaining: Math.max(0, 15 - earnedUsed) }
+    };
+
+    res.json(balances);
   } catch (error) {
     next(error);
   }
@@ -134,5 +198,6 @@ module.exports = {
   applyLeave,
   getMyLeaves,
   getAllLeaves,
-  updateLeaveStatus
+  updateLeaveStatus,
+  getLeaveBalances
 };

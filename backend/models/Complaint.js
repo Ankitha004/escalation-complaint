@@ -36,16 +36,26 @@ const commentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    senderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
     message: {
       type: String,
       required: true,
+    },
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
+    editedAt: {
+      type: Date,
     },
     createdAt: {
       type: Date,
       default: Date.now,
     },
-  },
-  { _id: false }
+  }
 );
 
 const complaintSchema = new mongoose.Schema(

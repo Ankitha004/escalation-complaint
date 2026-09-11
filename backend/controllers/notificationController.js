@@ -1,15 +1,57 @@
 const Notification = require('../models/Notification');
+const Complaint = require('../models/Complaint');
 
 // @desc    Get notifications for the logged-in user
 // @route   GET /api/notifications
 // @access  Private
 const getNotifications = async (req, res, next) => {
   try {
-    const notifications = await Notification.find({ user: req.user._id })
+    const rawNotifications = await Notification.find({ user: req.user._id })
+      .populate('relatedComplaint')
       .sort({ createdAt: -1 })
-      .limit(50);
+      .limit(100);
 
-    res.json(notifications);
+    const validNotifications = [];
+    const orphanIds = [];
+
+    for (let notif of rawNotifications) {
+      if (notif.relatedComplaint) {
+        validNotifications.push(notif);
+      } else {
+        const match = notif.message ? notif.message.match(/CMP\d+/i) : null;
+        if (match) {
+          const compIdStr = match[0].toUpperCase();
+          const compExists = await Complaint.exists({ complaintId: compIdStr });
+          if (compExists) {
+            validNotifications.push(notif);
+          } else {
+            orphanIds.push(notif._id);
+          }
+        } else if (notif.type === 'broadcast' || !notif.message?.toLowerCase().includes('complaint')) {
+          validNotifications.push(notif);
+        } else {
+          orphanIds.push(notif._id);
+        }
+      }
+    }
+
+    if (orphanIds.length > 0) {
+      await Notification.deleteMany({ _id: { $in: orphanIds } });
+    }
+
+    res.json(validNotifications);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Clear all notifications for the logged-in user
+// @route   DELETE /api/notifications/clear-all
+// @access  Private
+const clearAllNotifications = async (req, res, next) => {
+  try {
+    await Notification.deleteMany({ user: req.user._id });
+    res.json({ message: 'All notifications cleared' });
   } catch (error) {
     next(error);
   }
@@ -105,5 +147,6 @@ module.exports = {
   markAsRead, 
   markAllAsRead, 
   deleteNotification, 
+  clearAllNotifications,
   broadcastNotification 
 };

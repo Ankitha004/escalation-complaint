@@ -13,7 +13,9 @@ import {
   CalendarDays,
   User,
   DollarSign,
-  FileText
+  Sparkles,
+  FileText,
+  Clock
 } from 'lucide-react';
 
 const HRSidebar = ({ activeTab = 'dashboard', badgeCount = 0 }) => {
@@ -45,7 +47,8 @@ const HRSidebar = ({ activeTab = 'dashboard', badgeCount = 0 }) => {
   return (
     <aside style={{ 
       width: '280px', 
-      background: '#111827', 
+      background: 'linear-gradient(180deg, #0F172A 0%, #1E3A8A 100%)', 
+      borderRight: '1px solid rgba(255, 255, 255, 0.08)',
       color: '#F9FAFB', 
       display: 'flex', 
       flexDirection: 'column', 
@@ -96,6 +99,9 @@ const HRSidebar = ({ activeTab = 'dashboard', badgeCount = 0 }) => {
             HR MODULE
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            <button onClick={() => navigate('/hr-attendance')} style={navButtonStyle(activeTab === 'attendance')}>
+              <Clock size={18} /> <span>Attendance Logs</span>
+            </button>
             <button onClick={() => navigate('/hr-complaints')} style={navButtonStyle(activeTab === 'hr-complaints')}>
               <FileText size={18} /> <span>Complaint Management</span>
             </button>
@@ -121,8 +127,8 @@ const HRSidebar = ({ activeTab = 'dashboard', badgeCount = 0 }) => {
             <button onClick={() => navigate('/hr-leaves')} style={navButtonStyle(activeTab === 'leaves')}>
               <CalendarDays size={18} /> <span>Leave Approvals</span>
             </button>
-            <button onClick={() => navigate('/hr-salaries')} style={navButtonStyle(activeTab === 'salaries')}>
-              <DollarSign size={18} /> <span>Salary & Incentives</span>
+            <button onClick={() => navigate('/hr-incentives')} style={navButtonStyle(activeTab === 'incentives' || activeTab === 'salaries')}>
+              <Sparkles size={18} /> <span>Resolution Incentives</span>
             </button>
           </div>
         </div>

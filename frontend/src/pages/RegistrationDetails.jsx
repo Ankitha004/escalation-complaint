@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import API from '../services/api';
 import HRSidebar from '../components/HRSidebar';
 import SuperAdminSidebar from '../components/SuperAdminSidebar';
+import { getDesignationsForDepartment } from '../utils/designationUtils';
 import { 
   ShieldCheck, 
   LayoutDashboard, 
@@ -22,7 +23,10 @@ import {
   Phone,
   Briefcase,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  UploadCloud,
+  FileText,
+  Paperclip
 } from 'lucide-react';
 
 const RegistrationDetails = () => {
@@ -39,8 +43,37 @@ const RegistrationDetails = () => {
   const [assignedDesignation, setAssignedDesignation] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
 
+  // CV Upload state
+  const [cvFile, setCvFile] = useState(null);
+  const [cvUploading, setCvUploading] = useState(false);
+  const [uploadedCvData, setUploadedCvData] = useState(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [actionSuccess, setActionSuccess] = useState(null);
+
+  const handleCvChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setCvFile(file);
+    setCvUploading(true);
+
+    const formData = new FormData();
+    formData.append('cv', file);
+    try {
+      const res = await API.post('/hr/upload-cv', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setUploadedCvData({
+        cvUrl: res.data.cvUrl,
+        cvOriginalName: res.data.cvOriginalName || file.name
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to upload CV file. Please try again.');
+      setCvFile(null);
+    } finally {
+      setCvUploading(false);
+    }
+  };
 
   // Team Leaders list fetched dynamically from MongoDB
   const [teamLeadersList, setTeamLeadersList] = useState([]);
@@ -118,7 +151,9 @@ const RegistrationDetails = () => {
           teamLeader: assignedTeamLeader,
           designation: assignedDesignation || 'Staff',
           phone: registration.phone,
-          department: registration.department
+          department: registration.department,
+          cvUrl: uploadedCvData?.cvUrl || '',
+          cvOriginalName: uploadedCvData?.cvOriginalName || ''
         });
       }
       setActionSuccess({
@@ -313,20 +348,86 @@ const RegistrationDetails = () => {
                     )}
                   </div>
 
-                  {/* Designation */}
+                  {/* Assign Designation Dropdown */}
                   <div>
                     <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.5rem' }}>
-                      Assign Designation
+                      Assign Designation *
                     </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Software Engineer, Manager..."
+                    <select
                       value={assignedDesignation}
                       onChange={(e) => setAssignedDesignation(e.target.value)}
-                      style={{ width: '100%', padding: '0.85rem 1rem', border: '2px solid #E2E8F0', borderRadius: '12px', fontSize: '0.95rem', color: '#0F172A', outline: 'none', transition: 'border-color 0.2s', boxSizing: 'border-box' }}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.85rem 1rem', 
+                        border: '2px solid #E2E8F0', 
+                        borderRadius: '12px', 
+                        fontSize: '0.95rem', 
+                        color: '#0F172A', 
+                        outline: 'none', 
+                        transition: 'border-color 0.2s', 
+                        appearance: 'none', 
+                        background: '#FFF url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748B\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E") no-repeat right 1rem center/1.2rem', 
+                        boxSizing: 'border-box' 
+                      }}
                       onFocus={(e) => e.target.style.borderColor = '#3B82F6'}
                       onBlur={(e) => e.target.style.borderColor = '#E2E8F0'}
-                    />
+                    >
+                      <option value="">Select Designation for {registration?.department || 'Department'}...</option>
+                      {getDesignationsForDepartment(registration?.department).map((desig) => (
+                        <option key={desig} value={desig}>{desig}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Upload Staff CV / Resume */}
+                  <div>
+                    <label style={{ fontSize: '0.82rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.5rem' }}>
+                      Upload Staff CV / Resume (.pdf, .doc, .docx)
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        onChange={handleCvChange}
+                        id="cv-upload-input"
+                        style={{ display: 'none' }}
+                      />
+                      <label
+                        htmlFor="cv-upload-input"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.6rem',
+                          padding: '0.85rem 1rem',
+                          border: '2px dashed #3B82F6',
+                          borderRadius: '12px',
+                          background: '#EFF6FF',
+                          color: '#2563EB',
+                          fontWeight: '700',
+                          fontSize: '0.9rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <UploadCloud size={20} />
+                        {cvUploading ? 'Uploading Document...' : uploadedCvData ? 'Change Attached CV' : 'Upload Staff CV / Resume'}
+                      </label>
+                    </div>
+
+                    {uploadedCvData && (
+                      <div style={{ marginTop: '0.6rem', padding: '0.65rem 0.85rem', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#047857', fontSize: '0.82rem', fontWeight: '700' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', overflow: 'hidden' }}>
+                          <FileText size={16} />
+                          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {uploadedCvData.cvOriginalName}
+                          </span>
+                        </div>
+                        <span style={{ background: '#DCFCE7', color: '#15803D', padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800' }}>
+                          ✓ Attached
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Approve Button */}

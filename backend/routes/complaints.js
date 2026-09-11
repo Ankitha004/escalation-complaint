@@ -5,6 +5,7 @@ const {
   getMyComplaints,
   getComplaintById,
   updateComplaint,
+  updateComment,
   getComplaints,
   cancelComplaint,
   reopenComplaint,
@@ -13,10 +14,11 @@ const {
   extendSlaDeadline
 } = require('../controllers/complaintController');
 const { protect } = require('../middleware/authMiddleware');
+const { authorize } = require('../middleware/roleMiddleware');
 
 router.use(protect);
 
-router.route('/trigger-sla-check').post(triggerSlaCheck);
+router.route('/trigger-sla-check').post(authorize('Super Admin', 'Manager', 'HR'), triggerSlaCheck);
 
 router.route('/my')
   .get(getMyComplaints);
@@ -29,7 +31,10 @@ router.route('/:id')
   .get(getComplaintById)
   .put(updateComplaint);
 
-router.route('/:id/extend-sla').put(extendSlaDeadline);
+router.route('/:id/comments/:commentIndex').put(updateComment);
+router.route('/:id/comment/:commentIndex').put(updateComment);
+
+router.route('/:id/extend-sla').put(authorize('Super Admin'), extendSlaDeadline);
 router.route('/:id/cancel').put(cancelComplaint);
 router.route('/:id/reopen').put(reopenComplaint);
 router.route('/:id/feedback').put(submitFeedback);

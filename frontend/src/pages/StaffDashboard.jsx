@@ -624,6 +624,61 @@ const StaffDashboard = () => {
                 )}
               </div>
 
+            </div>
+
+            {/* RIGHT COLUMN */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+              
+              {/* NOTIFICATIONS WIDGET */}
+              <div style={{ 
+                background: '#FFFFFF', 
+                borderRadius: '18px', 
+                padding: '1.5rem', 
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)', 
+                border: '1px solid #E2E8F0' 
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <div style={{ width: '8px', height: '18px', borderRadius: '4px', background: '#3B82F6' }}></div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Notifications</h3>
+                  </div>
+                  <span onClick={() => navigate('/notifications')} style={{ fontSize: '0.78rem', fontWeight: '700', color: '#3B82F6', cursor: 'pointer' }}>View All</span>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {notifications.length > 0 ? (
+                    notifications.map((n, idx) => (
+                      <div key={n._id || idx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', padding: '0.4rem 0' }}>
+                        <div style={{ 
+                          width: '30px', 
+                          height: '30px', 
+                          borderRadius: '50%', 
+                          background: n.isRead ? '#F1F5F9' : '#EFF6FF', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          flexShrink: 0
+                        }}>
+                          <Bell size={14} color={n.isRead ? '#64748B' : '#3B82F6'} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: n.isRead ? '500' : '600', lineHeight: '1.35' }}>
+                            {n.message}
+                          </div>
+                          <div style={{ fontSize: '0.65rem', color: '#94A3B8', marginTop: '0.15rem', fontWeight: '500' }}>
+                            {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(n.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: '1rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.78rem' }}>
+                      You're all caught up! No new notifications.
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* COMPLAINT STATUS OVERVIEW */}
               <div style={{ 
                 background: '#FFFFFF', 
@@ -683,63 +738,6 @@ const StaffDashboard = () => {
               </div>
 
             </div>
-
-            {/* RIGHT COLUMN */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-              
-
-
-              {/* NOTIFICATIONS WIDGET */}
-              <div style={{ 
-                background: '#FFFFFF', 
-                borderRadius: '18px', 
-                padding: '1.5rem', 
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)', 
-                border: '1px solid #E2E8F0' 
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <div style={{ width: '8px', height: '18px', borderRadius: '4px', background: '#3B82F6' }}></div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Notifications</h3>
-                  </div>
-                  <span onClick={() => navigate('/notifications')} style={{ fontSize: '0.78rem', fontWeight: '700', color: '#3B82F6', cursor: 'pointer' }}>View All</span>
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {notifications.length > 0 ? (
-                    notifications.map((n, idx) => (
-                      <div key={n._id || idx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', padding: '0.4rem 0' }}>
-                        <div style={{ 
-                          width: '30px', 
-                          height: '30px', 
-                          borderRadius: '50%', 
-                          background: n.isRead ? '#F1F5F9' : '#EFF6FF', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center', 
-                          flexShrink: 0
-                        }}>
-                          <Bell size={14} color={n.isRead ? '#64748B' : '#3B82F6'} />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '0.78rem', color: '#0F172A', fontWeight: n.isRead ? '500' : '600', lineHeight: '1.35' }}>
-                            {n.message}
-                          </div>
-                          <div style={{ fontSize: '0.65rem', color: '#94A3B8', marginTop: '0.15rem', fontWeight: '500' }}>
-                            {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(n.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ padding: '1rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.78rem' }}>
-                      You're all caught up! No new notifications.
-                    </div>
-                  )}
-                </div>
-              </div>
-
-            </div>
           </div>
         </main>
 
@@ -780,7 +778,7 @@ const StaffDashboard = () => {
                 </button>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '12px', flex: 1, marginRight: '0.5rem', textAlign: 'center' }}>
                   <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>Clock In</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0F172A' }}>{myAttendance?.clockIn || '--:--'}</div>
@@ -791,16 +789,26 @@ const StaffDashboard = () => {
                 </div>
               </div>
 
-              {myAttendance && myAttendance.clockOut && myAttendance.clockOut !== 'In Progress' ? (
+              <div style={{ background: '#F0FDF4', border: '1px solid #DCFCE7', padding: '0.85rem 1rem', borderRadius: '12px', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#166534', fontWeight: '700', letterSpacing: '0.5px' }}>TOTAL DAYS ATTENDED</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748B' }}>Total attendance records verified</div>
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#15803D', fontFamily: "'Outfit', sans-serif" }}>
+                  {myAttendance?.totalDaysAttended || 0} Days
+                </div>
+              </div>
+
+              {myAttendance && myAttendance.clockIn && myAttendance.clockIn !== '--:--' && myAttendance.clockOut && myAttendance.clockOut !== 'In Progress' && myAttendance.clockOut !== '--:--' ? (
                 <div style={{ background: '#ECFDF5', padding: '1rem', borderRadius: '12px', textAlign: 'center', color: '#065F46', fontWeight: '600' }}>
-                  Shift Completed
+                  Shift Completed for Today
                 </div>
               ) : (
                 <button 
                   onClick={handleClockIn} 
                   style={{ 
                     width: '100%', 
-                    background: myAttendance ? '#0F172A' : '#2563EB', 
+                    background: (myAttendance && myAttendance.clockIn && myAttendance.clockIn !== '--:--') ? '#0F172A' : '#2563EB', 
                     color: '#FFFFFF', 
                     border: 'none', 
                     borderRadius: '12px', 
@@ -814,8 +822,8 @@ const StaffDashboard = () => {
                     gap: '0.5rem'
                   }}
                 >
-                  {myAttendance ? <LogOut size={18} /> : <LogIn size={18} />}
-                  {myAttendance ? 'Clock Out Now' : 'Clock In Now'}
+                  {(myAttendance && myAttendance.clockIn && myAttendance.clockIn !== '--:--') ? <LogOut size={18} /> : <LogIn size={18} />}
+                  {(myAttendance && myAttendance.clockIn && myAttendance.clockIn !== '--:--') ? 'Clock Out Now' : 'Clock In Now'}
                 </button>
               )}
             </div>

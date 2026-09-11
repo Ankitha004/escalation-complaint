@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import SuperAdminSidebar from '../components/SuperAdminSidebar';
+import ResolutionCertificateModal from '../components/ResolutionCertificateModal';
 import API from '../services/api';
 import {
   CheckCircle2,
@@ -538,61 +539,10 @@ const SuperAdminResolved = () => {
 
       {/* RESOLUTION CERTIFICATE / RECEIPT MODAL */}
       {receiptModalComplaint && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)', padding: '1rem' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '22px', maxWidth: '520px', width: '100%', padding: '2rem', boxShadow: '0 30px 60px -10px rgba(0,0,0,0.2)', border: '1px solid #E2E8F0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #E2E8F0', paddingBottom: '1rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <ShieldCheck size={24} color="#16A34A" />
-                  <span style={{ fontWeight: '800', fontSize: '1.1rem', color: '#0F172A', fontFamily: "'Outfit', sans-serif" }}>COMPLAINT RESOLUTION CERTIFICATE</span>
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>OFFICIAL AUDITED RESOLUTION RECORD</div>
-              </div>
-              <button onClick={() => setReceiptModalComplaint(null)} style={{ background: '#F1F5F9', border: 'none', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={16} color="#64748B" />
-              </button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '1rem 0', fontSize: '0.82rem', borderBottom: '1px solid #F1F5F9' }}>
-              <div>
-                <div style={{ color: '#64748B', fontSize: '0.72rem', fontWeight: '700' }}>TICKET ID</div>
-                <div style={{ fontWeight: '800', color: '#2563EB', fontSize: '1rem' }}>{receiptModalComplaint.complaintId}</div>
-              </div>
-              <div>
-                <div style={{ color: '#64748B', fontSize: '0.72rem', fontWeight: '700' }}>CATEGORY / DEPT</div>
-                <div style={{ fontWeight: '800', color: '#0F172A' }}>{receiptModalComplaint.responsibleDepartment?.name || receiptModalComplaint.department || 'General'}</div>
-              </div>
-              <div>
-                <div style={{ color: '#64748B', fontSize: '0.72rem', fontWeight: '700' }}>COMPLAINANT</div>
-                <div style={{ fontWeight: '800', color: '#0F172A' }}>{receiptModalComplaint.createdBy?.name || receiptModalComplaint.staffName}</div>
-              </div>
-              <div>
-                <div style={{ color: '#64748B', fontSize: '0.72rem', fontWeight: '700' }}>RESOLVED BY</div>
-                <div style={{ fontWeight: '800', color: '#16A34A' }}>{receiptModalComplaint.assignedTo?.name || receiptModalComplaint.assignedTeamLeader?.name || receiptModalComplaint.teamLeader || 'Department Team'}</div>
-              </div>
-            </div>
-
-            <div style={{ padding: '1rem 0', display: 'flex', flexDirection: 'column', gap: '0.5rem', borderBottom: '1px solid #F1F5F9' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748B' }}>SUBJECT</div>
-              <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#0F172A' }}>{receiptModalComplaint.subject}</div>
-              <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '2px' }}>{receiptModalComplaint.description}</div>
-            </div>
-
-            <div style={{ background: '#ECFDF5', padding: '0.75rem 1rem', borderRadius: '10px', fontSize: '0.75rem', color: '#065F46', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
-              <span style={{ fontWeight: '700' }}>✓ STATUS: OFFICIALLY RESOLVED & CLOSED</span>
-              <span>Reward: +₹{receiptModalComplaint.incentiveRate || 500}</span>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
-              <button onClick={() => window.print()} style={{ flex: 1, background: '#2563EB', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '0.75rem', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-                <Printer size={15} /> Print Certificate
-              </button>
-              <button onClick={() => setReceiptModalComplaint(null)} style={{ padding: '0.75rem 1rem', background: '#F1F5F9', border: 'none', borderRadius: '10px', color: '#475569', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}>
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <ResolutionCertificateModal
+          complaint={receiptModalComplaint}
+          onClose={() => setReceiptModalComplaint(null)}
+        />
       )}
 
       {/* REOPEN COMPLAINT MODAL */}

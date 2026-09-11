@@ -10,8 +10,10 @@ const {
   manualEscalate
 } = require('../controllers/teamLeaderController');
 const { protect } = require('../middleware/authMiddleware');
+const { authorize } = require('../middleware/roleMiddleware');
 
 router.use(protect);
+router.use(authorize('Team Leader', 'Super Admin'));
 
 router.route('/complaints')
   .get(getTLComplaints);

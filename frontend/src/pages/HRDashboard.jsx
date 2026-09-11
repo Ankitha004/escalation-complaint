@@ -16,7 +16,11 @@ import {
   Filter,
   MoreVertical,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Clock,
+  UserCheck,
+  LogIn,
+  LogOut
 } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
@@ -39,14 +43,17 @@ const HRDashboard = () => {
   const [activeStaff, setActiveStaff] = useState([]);
   const [departmentData, setDepartmentData] = useState({});
   const [pendingComplaints, setPendingComplaints] = useState([]);
+  const [overallAttendance, setOverallAttendance] = useState({ stats: {}, members: [] });
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [statsRes, regsRes, staffRes] = await Promise.all([
+      const [statsRes, regsRes, staffRes, attRes] = await Promise.all([
         API.get('/hr/stats').catch(() => ({ data: {} })),
         API.get('/hr/registrations?status=pending').catch(() => ({ data: [] })),
-        API.get('/hr/registrations?status=active').catch(() => ({ data: [] }))
+        API.get('/hr/registrations?status=active').catch(() => ({ data: [] })),
+        API.get('/attendance/team').catch(() => ({ data: { stats: {}, members: [] } }))
       ]);
 
       setDashboardStats({
@@ -55,6 +62,8 @@ const HRDashboard = () => {
         totalTeamLeaders: statsRes.data?.totalTeamLeaders || 0,
         totalDepartments: statsRes.data?.totalDepartments || 0
       });
+
+      setOverallAttendance(attRes.data || { stats: {}, members: [] });
 
       const regData = regsRes.data || [];
       setPendingRegistrations(regData.slice(0, 4).map(u => ({
@@ -188,7 +197,7 @@ const HRDashboard = () => {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0F172A' }}>{user?.name || 'Priya Sharma'}</span>
-                <span style={{ fontSize: '0.7rem', color: '#64748B' }}>{role}</span>
+                <span style={{ fontSize: '0.8rem', color: '#64748B' }}>{role}</span>
               </div>
               <ChevronDown size={14} style={{ color: '#64748B' }} />
             </div>
@@ -243,14 +252,74 @@ const HRDashboard = () => {
               iconBg="#F5F3FF" 
               valueColor="#8B5CF6"
             />
-            <StatCard 
-              title="Departments" 
-              value={dashboardStats.totalDepartments} 
-              subtitle="Active departments"
-              icon={<Building2 size={22} color="#10B981" />} 
-              iconBg="#ECFDF5" 
-              valueColor="#10B981"
-            />
+          </div>
+
+          {/* OVERALL EMPLOYEE ATTENDANCE CARD */}
+          <div className="content-card hover-glow" style={{ padding: '1.5rem', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <Clock size={20} color="#2563EB" />
+                <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                  Overall Employee Attendance Today
+                </h3>
+                <span style={{ background: '#ECFDF5', color: '#16A34A', fontSize: '0.75rem', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>
+                  {overallAttendance?.stats?.presentCount || 0} / {overallAttendance?.stats?.totalMembers || 0} Present
+                </span>
+              </div>
+              <button 
+                onClick={() => navigate('/hr-attendance')}
+                style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '0.4rem 0.8rem', fontSize: '0.8rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+              >
+                Full Attendance Directory <ArrowRight size={14} />
+              </button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', color: '#64748B', fontWeight: '700' }}>
+                    <th style={{ padding: '0.75rem 0.75rem' }}>Employee</th>
+                    <th style={{ padding: '0.75rem 0.75rem' }}>Role</th>
+                    <th style={{ padding: '0.75rem 0.75rem' }}>Department</th>
+                    <th style={{ padding: '0.75rem 0.75rem' }}>Clock-In Time</th>
+                    <th style={{ padding: '0.75rem 0.75rem' }}>Clock-Out Time</th>
+                    <th style={{ padding: '0.75rem 0.75rem' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overallAttendance?.members?.length > 0 ? (
+                    overallAttendance.members.slice(0, 5).map((item) => (
+                      <tr key={item.employee._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '0.75rem 0.75rem', fontWeight: '700', color: '#0F172A' }}>
+                          <div>{item.employee?.name}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: '500' }}>ID: {item.employee?.employeeId}</div>
+                        </td>
+                        <td style={{ padding: '0.75rem 0.75rem', color: '#475569' }}>{item.employee?.role}</td>
+                        <td style={{ padding: '0.75rem 0.75rem', color: '#64748B' }}>{item.employee?.department?.name || item.employee?.department || 'General'}</td>
+                        <td style={{ padding: '0.75rem 0.75rem', color: '#15803D', fontWeight: '700' }}>{item.clockIn}</td>
+                        <td style={{ padding: '0.75rem 0.75rem', color: '#334155', fontWeight: '700' }}>{item.clockOut}</td>
+                        <td style={{ padding: '0.75rem 0.75rem' }}>
+                          <span style={{ 
+                            padding: '3px 8px', 
+                            borderRadius: '12px', 
+                            fontSize: '0.72rem', 
+                            fontWeight: '800',
+                            background: item.isClockedIn ? '#DCFCE7' : '#FEF3C7',
+                            color: item.isClockedIn ? '#15803D' : '#D97706'
+                          }}>
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#64748B' }}>No attendance records logged today.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* TWO TABLES ROW */}
@@ -261,26 +330,26 @@ const HRDashboard = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Pending Onboarding Registrations</h3>
-                  <span style={{ background: '#EFF6FF', color: '#2563EB', fontSize: '0.65rem', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>{dashboardStats.pendingRegistrations} Requests</span>
+                  <span style={{ background: '#EFF6FF', color: '#2563EB', fontSize: '0.75rem', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>{dashboardStats.pendingRegistrations} Requests</span>
                 </div>
               </div>
               
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
                   <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
-                  <input type="text" placeholder="Search by Name, Email, Phone or ID..." style={{ width: '100%', padding: '0.45rem 1rem 0.45rem 2rem', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.75rem', outline: 'none', background: '#F8FAFC' }} />
+                  <input type="text" placeholder="Search by Name, Email, Phone or ID..." style={{ width: '100%', padding: '0.45rem 1rem 0.45rem 2rem', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none', background: '#F8FAFC' }} />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '0.45rem 0.75rem', fontSize: '0.75rem', color: '#64748B', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '0.45rem 0.75rem', fontSize: '0.85rem', color: '#64748B', cursor: 'pointer' }}>
                   <Filter size={14} /> All Departments
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '0.45rem 0.75rem', fontSize: '0.75rem', color: '#64748B', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '0.45rem 0.75rem', fontSize: '0.85rem', color: '#64748B', cursor: 'pointer' }}>
                   <Filter size={14} /> All Status
                 </div>
               </div>
 
               {pendingRegistrations.length > 0 ? (
                 <div style={{ overflowX: 'auto', flex: 1 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.75rem' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: '700' }}>
                         <th style={{ padding: '0.75rem 0.25rem' }}>Registration ID</th>
@@ -301,12 +370,12 @@ const HRDashboard = () => {
                           <td style={{ padding: '0.75rem 0.25rem', color: '#64748B' }}>{reg.department}</td>
                           <td style={{ padding: '0.75rem 0.25rem', color: '#64748B' }}>{reg.appliedDate}</td>
                           <td style={{ padding: '0.75rem 0.25rem' }}>
-                            <span style={{ display: 'inline-flex', background: '#FFFBEB', color: '#D97706', fontSize: '0.65rem', fontWeight: '700', padding: '0.2rem 0.5rem', borderRadius: '12px', border: '1px solid #FDE68A' }}>
+                            <span style={{ display: 'inline-flex', background: '#FFFBEB', color: '#D97706', fontSize: '0.75rem', fontWeight: '700', padding: '0.2rem 0.5rem', borderRadius: '12px', border: '1px solid #FDE68A' }}>
                               Pending HR Review
                             </span>
                           </td>
                           <td style={{ padding: '0.75rem 0.25rem', textAlign: 'right' }}>
-                            <button onClick={() => navigate('/pending-registrations')} style={{ background: '#2563EB', color: '#FFF', border: 'none', padding: '0.35rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '600', cursor: 'pointer' }}>View Details</button>
+                            <button onClick={() => navigate('/pending-registrations')} style={{ background: '#2563EB', color: '#FFF', border: 'none', padding: '0.35rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>View Details</button>
                           </td>
                         </tr>
                       ))}
@@ -319,7 +388,7 @@ const HRDashboard = () => {
                 </div>
               )}
               
-              <div style={{ marginTop: '1rem', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '0.65rem', color: '#2563EB', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ marginTop: '1rem', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '0.65rem', color: '#2563EB', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ background: '#EFF6FF', borderRadius: '50%', padding: '0.25rem' }}>
                   <Users size={12} />
                 </div>
@@ -332,23 +401,23 @@ const HRDashboard = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Approved Staff Management</h3>
-                  <span style={{ background: '#ECFDF5', color: '#10B981', fontSize: '0.65rem', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>{dashboardStats.totalStaff} Active Staff</span>
+                  <span style={{ background: '#ECFDF5', color: '#10B981', fontSize: '0.75rem', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>{dashboardStats.totalStaff} Active Staff</span>
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
                 <div style={{ position: 'relative', flex: 1 }}>
                   <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
-                  <input type="text" placeholder="Search by Name, Employee ID, Designation or Team Leader..." style={{ width: '100%', padding: '0.45rem 1rem 0.45rem 2rem', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.75rem', outline: 'none', background: '#F8FAFC' }} />
+                  <input type="text" placeholder="Search by Name, Employee ID, Designation or Team Leader..." style={{ width: '100%', padding: '0.45rem 1rem 0.45rem 2rem', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none', background: '#F8FAFC' }} />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '0.45rem 0.75rem', fontSize: '0.75rem', color: '#64748B', cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', border: '1px solid #E2E8F0', borderRadius: '6px', padding: '0.45rem 0.75rem', fontSize: '0.85rem', color: '#64748B', cursor: 'pointer' }}>
                   <Filter size={14} /> All Departments
                 </div>
               </div>
 
               {activeStaff.length > 0 ? (
                 <div style={{ overflowX: 'auto', flex: 1 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.75rem' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: '700' }}>
                         <th style={{ padding: '0.75rem 0.25rem' }}>Employee ID</th>
@@ -368,7 +437,7 @@ const HRDashboard = () => {
                           <td style={{ padding: '0.75rem 0.25rem', color: '#64748B' }}>{staff.designation}</td>
                           <td style={{ padding: '0.75rem 0.25rem', color: '#2563EB', fontWeight: '600' }}>{staff.teamLeader}</td>
                           <td style={{ padding: '0.75rem 0.25rem' }}>
-                            <span style={{ display: 'inline-flex', background: '#ECFDF5', color: '#10B981', fontSize: '0.65rem', fontWeight: '700', padding: '0.2rem 0.5rem', borderRadius: '12px', border: '1px solid #A7F3D0' }}>
+                            <span style={{ display: 'inline-flex', background: '#ECFDF5', color: '#10B981', fontSize: '0.75rem', fontWeight: '700', padding: '0.2rem 0.5rem', borderRadius: '12px', border: '1px solid #A7F3D0' }}>
                               Active
                             </span>
                           </td>
@@ -384,7 +453,7 @@ const HRDashboard = () => {
               )}
               
               <div style={{ textAlign: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #E2E8F0' }}>
-                <span onClick={() => navigate('/staff-management')} style={{ fontSize: '0.75rem', fontWeight: '700', color: '#2563EB', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <span onClick={() => navigate('/staff-management')} style={{ fontSize: '0.85rem', fontWeight: '700', color: '#2563EB', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                   View all staff <ArrowRight size={14} />
                 </span>
               </div>
@@ -397,13 +466,13 @@ const HRDashboard = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Pending Complaints for Final Review</h3>
-                <span style={{ background: '#FEF2F2', color: '#DC2626', fontSize: '0.65rem', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>{pendingComplaints.length} Pending</span>
+                <span style={{ background: '#FEF2F2', color: '#DC2626', fontSize: '0.75rem', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>{pendingComplaints.length} Pending</span>
               </div>
             </div>
 
             {pendingComplaints.length > 0 ? (
               <div style={{ overflowX: 'auto', flex: 1 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.75rem' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: '700' }}>
                       <th style={{ padding: '0.75rem 0.25rem' }}>Ticket ID</th>
@@ -423,12 +492,12 @@ const HRDashboard = () => {
                         >
                           {c.complaintId}
                         </td>
-                        <td style={{ padding: '0.75rem 0.25rem', fontWeight: '700', color: '#0F172A' }}>{c.staffName}</td>
+                        <td style={{ padding: '0.75rem 0.25rem', fontWeight: '700', color: '#0F172A' }}>{c.createdBy?.name || c.staffName || 'Staff Member'}</td>
                         <td style={{ padding: '0.75rem 0.25rem', color: '#334155' }}>{c.subject}</td>
-                        <td style={{ padding: '0.75rem 0.25rem', color: '#64748B', fontWeight: '600' }}>{c.department}</td>
+                        <td style={{ padding: '0.75rem 0.25rem', color: '#64748B', fontWeight: '600' }}>{c.responsibleDepartment?.name || c.department || 'General'}</td>
                         <td style={{ padding: '0.75rem 0.25rem', color: c.priority === 'Critical' ? '#DC2626' : '#D97706', fontWeight: '600' }}>{c.priority}</td>
                         <td style={{ padding: '0.75rem 0.25rem', textAlign: 'right' }}>
-                          <button onClick={() => navigate(`/hr-complaint-details/${c._id}`)} style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '0.35rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: '600', cursor: 'pointer' }}>Review in Details</button>
+                          <button onClick={() => navigate(`/hr-complaint-details/${c._id}`)} style={{ background: '#10B981', color: '#FFF', border: 'none', padding: '0.35rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: '600', cursor: 'pointer' }}>Review in Details</button>
                         </td>
                       </tr>
                     ))}
@@ -460,14 +529,14 @@ const HRDashboard = () => {
                     const total = chartValues.reduce((a, b) => a + b, 0);
                     const percentage = Math.round((count / total) * 100);
                     return (
-                      <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                      <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: chartColors[index % chartColors.length] }}></span>
                           <span style={{ color: '#475569', fontWeight: '500' }}>{label}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <span style={{ fontWeight: '700', color: '#0F172A' }}>{count}</span>
-                          <span style={{ color: '#94A3B8', fontSize: '0.7rem', width: '35px', textAlign: 'right' }}>({percentage}%)</span>
+                          <span style={{ color: '#94A3B8', fontSize: '0.8rem', width: '35px', textAlign: 'right' }}>({percentage}%)</span>
                         </div>
                       </div>
                     );
@@ -482,7 +551,7 @@ const HRDashboard = () => {
             <div className="content-card hover-glow" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', marginBottom: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Recent Notifications</h3>
-                <span onClick={() => navigate('/notifications')} style={{ fontSize: '0.75rem', fontWeight: '700', color: '#2563EB', cursor: 'pointer' }}>View All</span>
+                <span onClick={() => navigate('/notifications')} style={{ fontSize: '0.85rem', fontWeight: '700', color: '#2563EB', cursor: 'pointer' }}>View All</span>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
@@ -493,14 +562,14 @@ const HRDashboard = () => {
                     </div>
                     <div style={{ flex: 1 }}>
                       <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem', color: '#334155', fontWeight: '500', lineHeight: '1.4' }}>{notif.text}</p>
-                      <span style={{ fontSize: '0.7rem', color: '#94A3B8' }}>{notif.time}</span>
+                      <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{notif.time}</span>
                     </div>
                   </div>
                 ))}
               </div>
               
               <div style={{ textAlign: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #E2E8F0' }}>
-                <span onClick={() => navigate('/notifications')} style={{ fontSize: '0.75rem', fontWeight: '700', color: '#2563EB', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                <span onClick={() => navigate('/notifications')} style={{ fontSize: '0.85rem', fontWeight: '700', color: '#2563EB', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
                   Go to Notifications <ArrowRight size={14} />
                 </span>
               </div>
@@ -519,7 +588,7 @@ const StatCard = ({ title, value, icon, iconBg, valueColor }) => (
       {icon}
     </div>
     <div style={{ display: 'flex', flexDirection: 'column' }}>
-      <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600', marginBottom: '0.25rem' }}>{title}</div>
+      <div style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: '600', marginBottom: '0.25rem' }}>{title}</div>
       <div style={{ fontSize: '1.5rem', fontWeight: '800', color: valueColor, fontFamily: "'Outfit', sans-serif", lineHeight: '1' }}>
         {value}
       </div>

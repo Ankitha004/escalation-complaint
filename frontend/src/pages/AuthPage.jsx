@@ -194,8 +194,11 @@ const AuthPage = () => {
   // Role Selection Handler
   const handleRoleSelect = (roleItem) => {
     setSelectedRole(roleItem.id);
-    if (roleItem.defaultEmpId) {
-      setLoginEmployeeId(roleItem.defaultEmpId);
+    const defaultEmpIds = roles.map(r => r.defaultEmpId);
+    if (!loginEmployeeId || defaultEmpIds.includes(loginEmployeeId)) {
+      if (roleItem.defaultEmpId) {
+        setLoginEmployeeId(roleItem.defaultEmpId);
+      }
     }
     setError('');
   };
@@ -544,18 +547,6 @@ const AuthPage = () => {
                   )}
                 </button>
               </form>
-
-              {/* Divider */}
-              <div className="role-divider">
-                <div className="role-divider-line" />
-                <div className="role-divider-text">or continue with</div>
-                <div className="role-divider-line" />
-              </div>
-
-              <button type="button" className="sso-btn">
-                <ShieldCheck size={18} className="sso-icon" />
-                SSO / Single Sign-On
-              </button>
 
               {/* Footer */}
               <div className="role-footer-text">

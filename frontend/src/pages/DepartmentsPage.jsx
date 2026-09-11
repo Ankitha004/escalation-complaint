@@ -689,10 +689,31 @@ const DepartmentsPage = () => {
                 <AlertCircle size={16} /> {modalError}
               </div>
             )}
-            <form onSubmit={handleSaveDepartment} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <form onSubmit={handleSaveDepartment} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>Department Name *</label>
-                <input type="text" required placeholder="e.g. IT Support" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                <input
+                  type="text"
+                  placeholder="e.g. IT Support"
+                  value={formData.name}
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value });
+                    if (modalError) setModalError('');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: modalError && (!formData.name.trim() || formData.name.trim().length < 3) ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                />
+                {modalError && (!formData.name.trim() || formData.name.trim().length < 3) && (
+                  <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>
+                    Department Name must be at least 3 characters.
+                  </span>
+                )}
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>Description</label>

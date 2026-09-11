@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
+import TLSidebar from '../components/TLSidebar';
+import SuperAdminSidebar from '../components/SuperAdminSidebar';
+import HRSidebar from '../components/HRSidebar';
+import ManagerSidebar from '../components/ManagerSidebar';
 import API from '../services/api';
 import DOMPurify from 'dompurify';
 import { calculateSLATimeLeft } from '../utils/slaUtils';
@@ -21,7 +24,9 @@ import {
   Calendar,
   User,
   Building2,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles,
+  Wand2
 } from 'lucide-react';
 
 const TLComplaintDetails = () => {
@@ -42,16 +47,47 @@ const TLComplaintDetails = () => {
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
 
+  const renderSidebar = () => {
+    const roleLower = (user?.role || '').toLowerCase();
+    if (roleLower.includes('super admin') || roleLower === 'superadmin') {
+      return <SuperAdminSidebar activeTab="complaints" />;
+    }
+    if (roleLower.includes('hr')) {
+      return <HRSidebar activeTab="complaints" />;
+    }
+    if (roleLower.includes('manager')) {
+      return <ManagerSidebar activeTab="complaints" />;
+    }
+    return <TLSidebar activeTab="complaints" />;
+  };
+
   const fetchComplaint = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await API.get(`/teamleader/complaints/${id}`);
-      setComplaint(res.data);
-      if (res.data) setStatus(res.data.status);
+      let res;
+      try {
+        res = await API.get(`/teamleader/complaints/${id}`);
+      } catch (tlErr) {
+        try {
+          res = await API.get(`/complaints/${id}`);
+        } catch (genErr) {
+          res = await API.get(`/superadmin/complaints/${id}`);
+        }
+      }
+      
+      const compData = res?.data?.complaint || res?.data;
+      if (!compData || typeof compData !== 'object' || (!compData._id && !compData.complaintId)) {
+        setError('Complaint record not found.');
+        setComplaint(null);
+      } else {
+        setComplaint(compData);
+        if (compData.status) setStatus(compData.status);
+      }
     } catch (err) {
       console.error('Fetch TL complaint error:', err);
-      setError('Unable to load complaint details. Please try again.');
+      setError(err.response?.data?.message || 'Complaint record not found or access restricted.');
+      setComplaint(null);
     } finally {
       setLoading(false);
     }
@@ -69,7 +105,8 @@ const TLComplaintDetails = () => {
         status: 'In Progress',
         note: 'Accepted by Team Leader'
       });
-      setComplaint(res.data);
+      const updatedData = res?.data?.complaint || res?.data;
+      setComplaint(updatedData);
       setStatus('In Progress');
     } catch (err) {
       alert('Failed to accept complaint.');
@@ -88,7 +125,8 @@ const TLComplaintDetails = () => {
         status,
         note: actionNote
       });
-      setComplaint(res.data);
+      const updatedData = res?.data?.complaint || res?.data;
+      setComplaint(updatedData);
       setActionNote('');
       alert('Complaint status updated successfully!');
     } catch (err) {
@@ -118,45 +156,57 @@ const TLComplaintDetails = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#F8FAFC' }}>
-        <Navbar activeTabTitle="Team Leader Ticket Management" />
-        <div style={{ padding: '5rem 2rem', textAlign: 'center', color: '#64748B' }}>
+      <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC' }}>
+        {renderSidebar()}
+        <main style={{ flex: 1, padding: '5rem 2rem', textAlign: 'center', color: '#64748B' }}>
           <RefreshCw size={32} className="spin-icon" style={{ color: '#4F46E5', marginBottom: '0.75rem' }} />
           <div style={{ fontWeight: '700', fontSize: '1rem', color: '#0F172A' }}>Loading ticket details...</div>
-        </div>
+        </main>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !complaint) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#F8FAFC' }}>
-        <Navbar activeTabTitle="Team Leader Ticket Management" />
-        <div style={{ padding: '2rem 2.5rem', maxWidth: '1280px', width: '100%', margin: '0 auto' }}>
-          <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '1.5rem', borderRadius: '12px', textAlign: 'center', boxShadow: '0 2px 4px rgba(220,38,38,0.1)' }}>
-            <AlertTriangle size={32} style={{ margin: '0 auto 0.5rem auto' }} />
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '800', margin: '0 0 0.5rem 0' }}>Access Error</h3>
-            <p style={{ margin: 0 }}>{error}</p>
+      <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC' }}>
+        {renderSidebar()}
+        <main style={{ flex: 1, padding: '2rem 2.5rem' }}>
+          <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '2rem', borderRadius: '16px', textAlign: 'center', boxShadow: '0 2px 8px rgba(220,38,38,0.08)' }}>
+            <AlertTriangle size={36} style={{ margin: '0 auto 0.75rem auto' }} />
+            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', margin: '0 0 0.5rem 0' }}>Ticket Not Available</h3>
+            <p style={{ margin: '0 0 1.5rem 0', color: '#B91C1C' }}>{error || 'Complaint record not found or access restricted.'}</p>
+            <button 
+              onClick={() => navigate(-1)} 
+              style={{ background: '#DC2626', color: '#FFFFFF', border: 'none', padding: '0.65rem 1.25rem', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' }}
+            >
+              Go Back
+            </button>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
 
-  if (!complaint) return null;
+  // Helper for safely extracting string names
+  const getSafeStr = (val) => {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object' && val.name && typeof val.name === 'string') return val.name;
+    return '';
+  };
 
   // Normalized Fields Processing
-  const responsibleDeptName = complaint.responsibleDepartment?.name || complaint.department || 'General';
-  const assignedTLName = complaint.assignedTeamLeader?.name || complaint.teamLeader || 'Unassigned';
+  const responsibleDeptName = getSafeStr(complaint.responsibleDepartment) || (typeof complaint.department === 'string' ? complaint.department : (complaint.department?.name || 'General'));
+  const assignedTLName = getSafeStr(complaint.assignedTeamLeader) || getSafeStr(complaint.teamLeader) || 'Unassigned';
   const assignedTLEmpId = complaint.assignedTeamLeader?.employeeId ? `(${complaint.assignedTeamLeader.employeeId})` : '';
-  const deptManagerName = complaint.departmentManager?.name || 'Unassigned';
+  const deptManagerName = getSafeStr(complaint.departmentManager) || 'Unassigned';
   const deptManagerEmpId = complaint.departmentManager?.employeeId ? `(${complaint.departmentManager.employeeId})` : '';
 
   const isEscalated = complaint.status === 'Escalated' || complaint.escalated || complaint.escalatedToSuperAdmin;
   const isResolved = complaint.status === 'Resolved' || complaint.status === 'Closed';
   
   let slaText = calculateSLATimeLeft(complaint.createdAt, complaint.priority, complaint.status, complaint.totalPausedDuration);
-  let isSlaBreached = slaText.toLowerCase().includes('breach');
+  let isSlaBreached = (slaText || '').toLowerCase().includes('breach');
 
   if (isEscalated) {
     isSlaBreached = true;
@@ -166,10 +216,10 @@ const TLComplaintDetails = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#F8FAFC', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <Navbar activeTabTitle="Team Leader Ticket Management" />
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC', color: '#0F172A', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      {renderSidebar()}
 
-      <main style={{ padding: '2rem 2.5rem', maxWidth: '1400px', width: '100%', margin: '0 auto' }}>
+      <main style={{ flex: 1, padding: '2.25rem 2.75rem', overflowY: 'auto' }}>
         
         {/* TOP HEADER */}
         <div style={{ marginBottom: '2rem' }}>
@@ -425,7 +475,7 @@ const TLComplaintDetails = () => {
                       <h4 style={{ fontSize: '0.9rem', fontWeight: '700', color: '#0F172A', margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <CheckCircle2 size={16} color="#16A34A" /> I solved this issue
                       </h4>
-                      <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '0 0 1rem 0' }}>Write a report explaining the solution. This will close your ticket and send the report to the manager.</p>
+                      <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '0 0 1rem 0' }}>Write a report explaining the solution. This will send the report to the HR team for final review.</p>
                       
                       <textarea
                         rows="3"
@@ -535,44 +585,38 @@ const TLComplaintDetails = () => {
                     const actors = new Map();
                     
                     // Creator / Requester
-                    if (complaint.staffName) {
-                      actors.set(complaint.staffName, 'Raised Complaint');
-                    }
+                    const sName = getSafeStr(complaint.staffName);
+                    if (sName) actors.set(sName, 'Raised Complaint');
                     
                     // Assigned TL
-                    if (complaint.teamLeader && complaint.teamLeader !== 'Unassigned') {
-                      actors.set(complaint.teamLeader, 'Assigned Team Leader');
-                    }
+                    const tlName = getSafeStr(complaint.assignedTeamLeader) || getSafeStr(complaint.teamLeader);
+                    if (tlName && tlName !== 'Unassigned') actors.set(tlName, 'Assigned Team Leader');
                     
                     // Department Manager
-                    if (complaint.departmentManager && complaint.departmentManager !== 'Unassigned') {
-                      actors.set(complaint.departmentManager, 'Department Manager');
-                    }
+                    const mgrName = getSafeStr(complaint.departmentManager);
+                    if (mgrName && mgrName !== 'Unassigned') actors.set(mgrName, 'Department Manager');
 
                     // Commenters
                     if (complaint.comments && Array.isArray(complaint.comments)) {
                       complaint.comments.forEach(c => {
-                        if (c.senderName) {
-                          actors.set(c.senderName, `${c.senderRole} (Commented)`);
-                        }
+                        const senderStr = getSafeStr(c.senderName);
+                        if (senderStr) actors.set(senderStr, `${c.senderRole || 'User'} (Commented)`);
                       });
                     }
 
                     // Solver Reports
                     if (complaint.resolutionReports && Array.isArray(complaint.resolutionReports)) {
                       complaint.resolutionReports.forEach(r => {
-                        if (r.solverName) {
-                          actors.set(r.solverName, `${r.solverRole} (Submitted Report)`);
-                        }
+                        const solverStr = getSafeStr(r.solverName);
+                        if (solverStr) actors.set(solverStr, `${r.solverRole || 'Officer'} (Submitted Report)`);
                       });
                     }
 
                     // Timeline update actors
                     if (complaint.timeline && Array.isArray(complaint.timeline)) {
                       complaint.timeline.forEach(t => {
-                        if (t.updatedByName) {
-                          actors.set(t.updatedByName, 'Updated Complaint');
-                        }
+                        const updaterStr = getSafeStr(t.updatedByName);
+                        if (updaterStr) actors.set(updaterStr, 'Updated Complaint');
                       });
                     }
 

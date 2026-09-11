@@ -4,7 +4,7 @@ const Leave = require('../models/Leave');
 const Category = require('../models/Category');
 const Department = require('../models/Department');
 const { getSlaThresholdMinutes } = require('../services/escalationService');
-const { createNotification } = require('../services/notificationService');
+const { createNotification, notifyHRAndSuperAdminOnResolution } = require('../services/notificationService');
 
 
 // Helper to add escalation deadline to a complaint
@@ -149,21 +149,29 @@ const createComplaint = async (req, res, next) => {
 
     const savedComplaint = await complaint.save();
 
-    // 4. Notify Team Leader and Department Manager
+    // 4. Notify Creator (Staff), Team Leader and Department Manager
+    if (savedComplaint.createdBy) {
+      await createNotification(
+        savedComplaint.createdBy,
+        `Your complaint #${savedComplaint.complaintId} ("${savedComplaint.subject}") has been registered successfully.`,
+        savedComplaint._id
+      );
+    }
+
     if (savedComplaint.assignedTeamLeader) {
       await createNotification(
         savedComplaint.assignedTeamLeader,
-        `New complaint assigned: ${savedComplaint.complaintId} - ${savedComplaint.subject}`,
+        `New complaint assigned: #${savedComplaint.complaintId} - ${savedComplaint.subject}`,
         savedComplaint._id
       );
     }
     
     if (savedComplaint.departmentManager) {
-      // Don't duplicate notification if manager is also the TL (unlikely but possible)
+      // Don't duplicate notification if manager is also the TL
       if (String(savedComplaint.departmentManager) !== String(savedComplaint.assignedTeamLeader)) {
         await createNotification(
           savedComplaint.departmentManager,
-          `New complaint routed to your department: ${savedComplaint.complaintId}`,
+          `New complaint routed to your department: #${savedComplaint.complaintId}`,
           savedComplaint._id
         );
       }
@@ -262,15 +270,27 @@ const getComplaintById = async (req, res, next) => {
       throw new Error('Complaint not found');
     }
 
-    // Access control: Staff can only view their own complaint
+    // Access control: Staff can only view their own complaint; TL only their team; Manager only their department
     if (req.user.role === 'Staff') {
       const isOwner =
-        complaint.createdBy.toString() === req.user._id.toString() ||
-        complaint.staffId === req.user.employeeId;
+        (complaint.createdBy && complaint.createdBy.toString() === req.user._id.toString()) ||
+        (complaint.staffId && complaint.staffId === req.user.employeeId);
 
       if (!isOwner) {
         res.status(403);
         throw new Error('Not authorized to view complaints belonging to other staff members');
+      }
+    } else if (req.user.role === 'Team Leader') {
+      const { isAuthorizedForTLComplaint } = require('./teamLeaderController');
+      if (!(await isAuthorizedForTLComplaint(complaint, req.user))) {
+        res.status(403);
+        throw new Error('Not authorized to access complaints outside your team');
+      }
+    } else if (req.user.role === 'Manager') {
+      const { isAuthorizedForComplaint } = require('./managerController');
+      if (!(await isAuthorizedForComplaint(req.user, complaint))) {
+        res.status(403);
+        throw new Error('Not authorized to access complaints outside your department');
       }
     }
 
@@ -314,6 +334,43 @@ const updateComplaint = async (req, res, next) => {
       timelineTitle,
       timelineDescription
     } = req.body;
+
+    // Role-based Access Control for updating a complaint
+    if (req.user.role === 'Staff') {
+      const isOwner =
+        (complaint.createdBy && complaint.createdBy.toString() === req.user._id.toString()) ||
+        (complaint.staffId && complaint.staffId === req.user.employeeId);
+
+      if (!isOwner) {
+        res.status(403);
+        throw new Error('Not authorized to modify complaints belonging to other staff members');
+      }
+
+      if (status && status !== complaint.status) {
+        res.status(403);
+        throw new Error('Staff are not authorized to directly modify status. Use cancel or reopen routes.');
+      }
+      if (priority && priority !== complaint.priority) {
+        res.status(403);
+        throw new Error('Staff are not authorized to modify priority.');
+      }
+      if (assignedTo !== undefined || assignedTeamLeader !== undefined || departmentManager !== undefined || responsibleDepartment !== undefined) {
+        res.status(403);
+        throw new Error('Staff are not authorized to modify assignment fields.');
+      }
+    } else if (req.user.role === 'Team Leader') {
+      const { isAuthorizedForTLComplaint } = require('./teamLeaderController');
+      if (!(await isAuthorizedForTLComplaint(complaint, req.user))) {
+        res.status(403);
+        throw new Error('Not authorized to modify complaints outside your team');
+      }
+    } else if (req.user.role === 'Manager') {
+      const { isAuthorizedForComplaint } = require('./managerController');
+      if (!(await isAuthorizedForComplaint(req.user, complaint))) {
+        res.status(403);
+        throw new Error('Not authorized to modify complaints outside your department');
+      }
+    }
 
     if (status && status !== complaint.status) {
       if (status === 'Waiting on User') {
@@ -385,11 +442,30 @@ const updateComplaint = async (req, res, next) => {
 
     const updated = await complaint.save();
 
-    // Notify the staff if status changed to Resolved
-    if (status === 'Resolved' && updated.createdBy) {
+    // Notifications on status change or comment
+    if (status && status !== 'Resolved' && updated.createdBy) {
       await createNotification(
         updated.createdBy,
-        `Your complaint (${updated.complaintId}) has been resolved.`,
+        `Your complaint (${updated.complaintId}) status has been updated to "${status}".`,
+        updated._id
+      );
+    }
+
+    if (status === 'Resolved') {
+      if (updated.createdBy) {
+        await createNotification(
+          updated.createdBy,
+          `Your complaint (${updated.complaintId}) has been resolved.`,
+          updated._id
+        );
+      }
+      await notifyHRAndSuperAdminOnResolution(updated, req.user ? req.user.name : '');
+    }
+
+    if (comment && updated.createdBy && String(updated.createdBy) !== String(req.user._id)) {
+      await createNotification(
+        updated.createdBy,
+        `New comment added on your complaint (${updated.complaintId}) by ${req.user.name} (${req.user.role}).`,
         updated._id
       );
     }
@@ -540,6 +616,10 @@ const reopenComplaint = async (req, res, next) => {
       res.status(400);
       throw new Error('Only Resolved or Closed complaints can be reopened');
     }
+    if (complaint.feedbackRating) {
+      res.status(400);
+      throw new Error('Complaint cannot be reopened after feedback and rating have been submitted');
+    }
 
     complaint.status = 'In Progress';
     // Clear resolved/closed dates if we are reopening
@@ -554,12 +634,12 @@ const reopenComplaint = async (req, res, next) => {
       timestamp: new Date()
     });
 
-    if (complaint.assignedTo || complaint.teamLeader !== 'Unassigned') {
+    const notifyUser = complaint.assignedTeamLeader || complaint.departmentManager || complaint.assignedTo;
+    if (notifyUser) {
       await createNotification(
-        complaint.assignedTo || null,
-        'Ticket Reopened',
-        `Ticket ${complaint.complaintId} has been reopened by the staff. Reason: ${comment || 'No reason provided.'}`,
-        'warning'
+        notifyUser,
+        `Ticket #${complaint.complaintId} has been reopened by ${req.user.name}. Reason: ${comment || 'No reason provided.'}`,
+        complaint._id
       );
     }
 
@@ -697,8 +777,89 @@ const extendSlaDeadline = async (req, res, next) => {
       .populate('departmentManager', 'name employeeId role')
       .populate('assignedTo', 'name employeeId role')
       .populate('createdBy', 'name employeeId email phone department designation');
-
     res.json(addEscalationDeadline(populated || complaint));
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Edit a comment on a complaint (strictly within 15 minutes window)
+// @route   PUT /api/complaints/:id/comments/:commentIndex
+// @access  Private
+const updateComment = async (req, res, next) => {
+  try {
+    const { id, commentIndex } = req.params;
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+      res.status(400);
+      throw new Error('Comment message is required');
+    }
+
+    let complaint;
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      complaint = await Complaint.findById(id);
+    }
+    if (!complaint) {
+      complaint = await Complaint.findOne({ complaintId: id });
+    }
+
+    if (!complaint) {
+      res.status(404);
+      throw new Error('Complaint not found');
+    }
+
+    // Find target comment by index or ObjectId
+    let comment = null;
+    if (mongoose.Types.ObjectId.isValid(commentIndex)) {
+      comment = complaint.comments.id(commentIndex);
+    } else {
+      const idx = parseInt(commentIndex, 10);
+      if (!isNaN(idx) && complaint.comments[idx]) {
+        comment = complaint.comments[idx];
+      }
+    }
+
+    if (!comment) {
+      res.status(404);
+      throw new Error('Comment not found');
+    }
+
+    // 15 Minutes Edit Window Check
+    const commentTime = new Date(comment.createdAt || Date.now()).getTime();
+    const currentTime = Date.now();
+    const diffMinutes = (currentTime - commentTime) / (1000 * 60);
+
+    if (diffMinutes > 15) {
+      res.status(400);
+      throw new Error('Comments can only be edited within 15 minutes of posting.');
+    }
+
+    // Authorization check: User must be sender or HR / Admin
+    const isSender = (comment.senderId && String(comment.senderId) === String(req.user._id)) ||
+                     (comment.senderName === req.user.name) ||
+                     (['HR', 'Super Admin'].includes(req.user.role));
+
+    if (!isSender) {
+      res.status(403);
+      throw new Error('Not authorized to edit this comment.');
+    }
+
+    comment.message = message.trim();
+    comment.isEdited = true;
+    comment.editedAt = new Date();
+
+    const updated = await complaint.save();
+
+    const populated = await Complaint.findById(updated._id)
+      .populate('responsibleDepartment', 'name')
+      .populate('assignedTeamLeader', 'name employeeId role')
+      .populate('departmentManager', 'name employeeId role')
+      .populate('assignedTo', 'name employeeId role')
+      .populate('createdBy', 'name employeeId email phone department designation');
+
+    res.json(addEscalationDeadline(populated || updated));
   } catch (error) {
     next(error);
   }
@@ -709,6 +870,7 @@ module.exports = {
   getMyComplaints,
   getComplaintById,
   updateComplaint,
+  updateComment,
   getComplaints,
   cancelComplaint,
   reopenComplaint,

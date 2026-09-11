@@ -44,8 +44,13 @@ router.route('/complaints/:id')
 router.route('/complaints/:id/status')
   .put(authorize('HR', 'Super Admin'), updateHRComplaintStatus);
 
+const { updateComment } = require('../controllers/complaintController');
+
 router.route('/complaints/:id/comment')
   .post(authorize('HR', 'Super Admin'), addHRComment);
+
+router.route('/complaints/:id/comments/:commentIndex')
+  .put(authorize('HR', 'Super Admin'), updateComment);
 
 router.route('/complaints/:id/resolve-report')
   .post(authorize('HR', 'Super Admin'), submitHRResolutionReport);
@@ -76,6 +81,26 @@ router.route('/registrations/:id/approve')
 
 router.route('/registrations/:id/reject')
   .put(authorize('HR', 'Super Admin'), rejectRegistration);
+
+const upload = require('../middleware/uploadMiddleware');
+
+// Upload Staff CV
+router.post('/upload-cv', authorize('HR', 'Super Admin'), upload.single('cv'), (req, res, next) => {
+  try {
+    if (!req.file) {
+      res.status(400);
+      throw new Error('No CV document uploaded');
+    }
+    const cvUrl = `/uploads/${req.file.filename}`;
+    res.json({
+      cvUrl,
+      cvOriginalName: req.file.originalname,
+      message: 'CV uploaded successfully'
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // Salary & Incentives Management
 router.route('/salaries')

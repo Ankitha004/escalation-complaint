@@ -61,15 +61,17 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
 
   const [loading, setLoading] = useState(true);
   const [loadingLeaves, setLoadingLeaves] = useState(false);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab || 'overview');
   const [error, setError] = useState('');
 
   // Department name
   const [departmentName, setDepartmentName] = useState('');
 
-  // Stats & Complaints State
+  // Stats, Complaints & Attendance State
   const [complaints, setComplaints] = useState([]);
   const [leavesList, setLeavesList] = useState([]);
+  const [deptAttendance, setDeptAttendance] = useState({ stats: {}, members: [] });
   const [stats, setStats] = useState({
     totalComplaints: 0,
     pendingReview: 0,
@@ -125,6 +127,18 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
     }
   };
 
+  const fetchDeptAttendance = async () => {
+    setLoadingAttendance(true);
+    try {
+      const res = await API.get('/attendance/team');
+      setDeptAttendance(res.data || { stats: {}, members: [] });
+    } catch (err) {
+      console.error('Backend fetch error for department attendance:', err);
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
+
   const handleLeaveDecision = async (leaveId, decision) => {
     try {
       const res = await API.put(`/leaves/${leaveId}/status`, { status: decision });
@@ -138,6 +152,7 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
   useEffect(() => {
     fetchManagerComplaints();
     fetchLeaves();
+    fetchDeptAttendance();
   }, []);
 
   const safeComplaints = Array.isArray(complaints) ? complaints : [];
@@ -520,50 +535,113 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
 
             {/* ANALYTICS CHARTS ROW — Only on overview */}
             {isOverview && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem', alignItems: 'stretch' }}>
-                
-                <div style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                    <BarChart3 size={20} color="#0F172A" />
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Department Complaint Trend</h3>
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.25rem', alignItems: 'stretch' }}>
+                  
+                  <div style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                      <BarChart3 size={20} color="#0F172A" />
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Department Complaint Trend</h3>
+                    </div>
+                    <div style={{ flex: 1, position: 'relative', minHeight: '220px' }}>
+                      {sortedDates.length > 0 ? (
+                        <Line data={lineData} options={{ 
+                          maintainAspectRatio: false, 
+                          plugins: { legend: { display: false } }, 
+                          scales: { 
+                            y: { grid: { color: '#F1F5F9' }, beginAtZero: true, ticks: { stepSize: 1, color: '#94A3B8', font: { size: 11 } } }, 
+                            x: { grid: { display: false }, ticks: { color: '#94A3B8', font: { size: 11 } } } 
+                          } 
+                        }} />
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8' }}>
+                          <Activity size={32} style={{ marginBottom: '0.75rem', color: '#CBD5E1' }} />
+                          <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>No trend data available</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ flex: 1, position: 'relative', minHeight: '220px' }}>
-                    {sortedDates.length > 0 ? (
-                      <Line data={lineData} options={{ 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: { display: false } }, 
-                        scales: { 
-                          y: { grid: { color: '#F1F5F9' }, beginAtZero: true, ticks: { stepSize: 1, color: '#94A3B8', font: { size: 11 } } }, 
-                          x: { grid: { display: false }, ticks: { color: '#94A3B8', font: { size: 11 } } } 
-                        } 
-                      }} />
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94A3B8' }}>
-                        <Activity size={32} style={{ marginBottom: '0.75rem', color: '#CBD5E1' }} />
-                        <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>No trend data available</span>
-                      </div>
-                    )}
+
+                  <div style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                      <TrendingUp size={20} color="#0F172A" />
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Complaint Status Overview</h3>
+                    </div>
+                    <div style={{ flex: 1, position: 'relative', minHeight: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {statusLabels.length > 0 ? (
+                        <Doughnut data={doughnutData} options={{ maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, padding: 12, font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" }, color: '#0F172A' } } } }} />
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
+                          <TrendingUp size={32} style={{ marginBottom: '0.75rem', color: '#CBD5E1' }} />
+                          <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>No data available</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
                 </div>
 
-                <div style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                    <TrendingUp size={20} color="#0F172A" />
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Complaint Status Overview</h3>
+                {/* DEPARTMENT ATTENDANCE MONITORING CARD */}
+                <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '1.25rem 1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <UserCheck size={20} color="#0F172A" />
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Department Attendance Today</h3>
+                    </div>
+                    <button 
+                      onClick={fetchDeptAttendance}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', fontWeight: '600' }}
+                    >
+                      <RefreshCw size={14} className={loadingAttendance ? 'spin-icon' : ''} /> Refresh
+                    </button>
                   </div>
-                  <div style={{ flex: 1, position: 'relative', minHeight: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {statusLabels.length > 0 ? (
-                      <Doughnut data={doughnutData} options={{ maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, padding: 12, font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" }, color: '#0F172A' } } } }} />
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
-                        <TrendingUp size={32} style={{ marginBottom: '0.75rem', color: '#CBD5E1' }} />
-                        <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>No data available</span>
-                      </div>
-                    )}
+
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                          <th style={{ padding: '0.65rem 1rem', textAlign: 'left', color: '#64748B', fontWeight: '700' }}>Employee</th>
+                          <th style={{ padding: '0.65rem 1rem', textAlign: 'left', color: '#64748B', fontWeight: '700' }}>Role</th>
+                          <th style={{ padding: '0.65rem 1rem', textAlign: 'left', color: '#64748B', fontWeight: '700' }}>Clock In</th>
+                          <th style={{ padding: '0.65rem 1rem', textAlign: 'left', color: '#64748B', fontWeight: '700' }}>Clock Out</th>
+                          <th style={{ padding: '0.65rem 1rem', textAlign: 'left', color: '#64748B', fontWeight: '700' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingAttendance ? (
+                          <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: '#64748B' }}><RefreshCw size={20} className="spin-icon" /></td></tr>
+                        ) : deptAttendance?.members?.length > 0 ? (
+                          deptAttendance.members.map((item) => (
+                            <tr key={item.employee._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                              <td style={{ padding: '0.65rem 1rem', fontWeight: '700', color: '#0F172A' }}>
+                                <div>{item.employee?.name}</div>
+                                <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: '500' }}>ID: {item.employee?.employeeId}</div>
+                              </td>
+                              <td style={{ padding: '0.65rem 1rem', color: '#475569' }}>{item.employee?.role}</td>
+                              <td style={{ padding: '0.65rem 1rem', color: '#0F172A', fontWeight: '600' }}>{item.clockIn}</td>
+                              <td style={{ padding: '0.65rem 1rem', color: '#0F172A', fontWeight: '600' }}>{item.clockOut}</td>
+                              <td style={{ padding: '0.65rem 1rem' }}>
+                                <span style={{ 
+                                  padding: '3px 8px', 
+                                  borderRadius: '12px', 
+                                  fontSize: '0.68rem', 
+                                  fontWeight: '800',
+                                  background: item.isClockedIn ? '#DCFCE7' : '#F1F5F9',
+                                  color: item.isClockedIn ? '#15803D' : '#64748B'
+                                }}>
+                                  {item.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr><td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: '#64748B' }}>No department attendance records available.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-
-              </div>
+              </>
             )}
 
             {/* MAIN COMPLAINTS TABLE */}

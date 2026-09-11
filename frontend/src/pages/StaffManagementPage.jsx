@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import HRSidebar from '../components/HRSidebar';
 import SuperAdminSidebar from '../components/SuperAdminSidebar';
 import API from '../services/api';
+import { getDesignationsForDepartment } from '../utils/designationUtils';
 import { 
   Menu,
   CalendarDays,
@@ -22,6 +23,8 @@ import {
   UserPlus,
   UserCheck,
   Users,
+  FileText,
+  ExternalLink,
   X,
   ShieldAlert
 } from 'lucide-react';
@@ -59,6 +62,28 @@ const StaffManagement = () => {
     teamLeader: '',
     status: ''
   });
+  const [formErrors, setFormErrors] = useState({});
+  const [formTouched, setFormTouched] = useState({});
+  const [editErrorMsg, setEditErrorMsg] = useState('');
+
+  const validateEditStaffField = (field, value) => {
+    let err = '';
+    if (field === 'name') {
+      if (!value || !value.trim()) err = 'Full Name is required';
+      else if (value.trim().length < 3) err = 'Full Name must be at least 3 characters';
+    } else if (field === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!value || !value.trim()) err = 'Email Address is required';
+      else if (!emailRegex.test(value.trim())) err = 'Please enter a valid email address';
+    } else if (field === 'phone') {
+      if (value && value.trim()) {
+        if (!/^[0-9]{10}$/.test(value.trim())) err = 'Phone number must be exactly 10 digits';
+      }
+    } else if (field === 'designation') {
+      if (!value || !value.trim()) err = 'Designation is required';
+    }
+    return err;
+  };
 
   const fetchStaff = async () => {
     setLoading(true);
@@ -82,12 +107,8 @@ const StaffManagement = () => {
         status: u.status || 'Active'
       }));
       setStaff(mappedStaff);
-
-      // Populate team leaders list dynamically
-      const tls = mappedStaff.filter(u => u.role === 'Team Leader');
-      setTeamLeaders(tls);
     } catch (err) {
-      console.warn('Staff fetch notice:', err);
+      console.warn('Failed to fetch staff:', err);
       setStaff([]);
     } finally {
       setLoading(false);
@@ -121,26 +142,47 @@ const StaffManagement = () => {
     setFormData({
       name: s.name,
       email: s.email,
-      phone: s.phone || '',
+      phone: s.phone === 'N/A' ? '' : (s.phone || ''),
       role: s.role,
       designation: s.designation || '',
       department: s.department?._id || s.department || '',
       teamLeader: s.teamLeader?._id || s.teamLeader || '',
       status: s.status || 'Active'
     });
+    setFormErrors({});
+    setFormTouched({});
+    setEditErrorMsg('');
     setShowEditModal(true);
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    setEditErrorMsg('');
+
+    const errors = {
+      name: validateEditStaffField('name', formData.name),
+      email: validateEditStaffField('email', formData.email),
+      phone: validateEditStaffField('phone', formData.phone),
+      designation: validateEditStaffField('designation', formData.designation)
+    };
+
+    setFormErrors(errors);
+    setFormTouched({ name: true, email: true, phone: true, designation: true });
+
+    const hasErrors = Object.values(errors).some(err => err !== '');
+    if (hasErrors) {
+      setEditErrorMsg('Please fix the errors highlighted below.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       await API.put(`/users/${selectedEditStaff.id}`, {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
         role: formData.role,
-        designation: formData.designation,
+        designation: formData.designation.trim(),
         department: formData.department || null,
         teamLeader: formData.teamLeader || null,
         status: formData.status
@@ -148,7 +190,7 @@ const StaffManagement = () => {
       setShowEditModal(false);
       fetchStaff();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update user details.');
+      setEditErrorMsg(err.response?.data?.message || 'Failed to update user details.');
     } finally {
       setSubmitting(false);
     }
@@ -498,6 +540,21 @@ const StaffManagement = () => {
                     {selectedStaff.status === 'Inactive' ? 'BANNED' : selectedStaff.status}
                   </span>
                 </div>
+                <div>
+                  <span style={{ color: '#64748B', display: 'block', fontWeight: '500' }}>Curriculum Vitae (CV)</span>
+                  {selectedStaff.cvUrl ? (
+                    <a
+                      href={`http://localhost:5000${selectedStaff.cvUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#2563EB', fontWeight: '700', fontSize: '0.82rem', marginTop: '0.25rem', textDecoration: 'none' }}
+                    >
+                      <FileText size={15} /> {selectedStaff.cvOriginalName || 'View Staff CV'} <ExternalLink size={13} />
+                    </a>
+                  ) : (
+                    <span style={{ color: '#94A3B8', fontSize: '0.8rem' }}>No CV Uploaded</span>
+                  )}
+                </div>
               </div>
 
               <div style={{ marginTop: '1rem', borderTop: '1px solid #F1F5F9', paddingTop: '1rem' }}>
@@ -526,20 +583,102 @@ const StaffManagement = () => {
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {editErrorMsg && (
+              <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#B91C1C', padding: '0.75rem 1rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', fontWeight: '500' }}>
+                {editErrorMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleEditSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>Full Name *</label>
-                <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, name: val });
+                    if (formTouched.name) {
+                      setFormErrors(prev => ({ ...prev, name: validateEditStaffField('name', val) }));
+                    }
+                  }}
+                  onBlur={() => {
+                    setFormTouched(prev => ({ ...prev, name: true }));
+                    setFormErrors(prev => ({ ...prev, name: validateEditStaffField('name', formData.name) }));
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: formTouched.name && formErrors.name ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                />
+                {formTouched.name && formErrors.name && (
+                  <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{formErrors.name}</span>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>Email Address *</label>
-                  <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, email: val });
+                      if (formTouched.email) {
+                        setFormErrors(prev => ({ ...prev, email: validateEditStaffField('email', val) }));
+                      }
+                    }}
+                    onBlur={() => {
+                      setFormTouched(prev => ({ ...prev, email: true }));
+                      setFormErrors(prev => ({ ...prev, email: validateEditStaffField('email', formData.email) }));
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '8px',
+                      border: formTouched.email && formErrors.email ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                      fontSize: '0.85rem',
+                      outline: 'none'
+                    }}
+                  />
+                  {formTouched.email && formErrors.email && (
+                    <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{formErrors.email}</span>
+                  )}
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>Phone Number</label>
-                  <input type="text" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                  <input
+                    type="text"
+                    placeholder="10-digit mobile"
+                    value={formData.phone}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setFormData({ ...formData, phone: val });
+                      if (formTouched.phone) {
+                        setFormErrors(prev => ({ ...prev, phone: validateEditStaffField('phone', val) }));
+                      }
+                    }}
+                    onBlur={() => {
+                      setFormTouched(prev => ({ ...prev, phone: true }));
+                      setFormErrors(prev => ({ ...prev, phone: validateEditStaffField('phone', formData.phone) }));
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '8px',
+                      border: formTouched.phone && formErrors.phone ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                      fontSize: '0.85rem',
+                      outline: 'none'
+                    }}
+                  />
+                  {formTouched.phone && formErrors.phone && (
+                    <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{formErrors.phone}</span>
+                  )}
                 </div>
               </div>
 
@@ -555,7 +694,37 @@ const StaffManagement = () => {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>Designation *</label>
-                  <input type="text" required placeholder="e.g. Associate Tech" value={formData.designation} onChange={(e) => setFormData({ ...formData, designation: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                  <select
+                    value={formData.designation}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, designation: val });
+                      if (formTouched.designation) {
+                        setFormErrors(prev => ({ ...prev, designation: validateEditStaffField('designation', val) }));
+                      }
+                    }}
+                    onBlur={() => {
+                      setFormTouched(prev => ({ ...prev, designation: true }));
+                      setFormErrors(prev => ({ ...prev, designation: validateEditStaffField('designation', formData.designation) }));
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '8px',
+                      border: formTouched.designation && formErrors.designation ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      background: '#FFF'
+                    }}
+                  >
+                    <option value="">Select Designation for {formData.department || 'Department'}...</option>
+                    {getDesignationsForDepartment(formData.department).map((desig) => (
+                      <option key={desig} value={desig}>{desig}</option>
+                    ))}
+                  </select>
+                  {formTouched.designation && formErrors.designation && (
+                    <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{formErrors.designation}</span>
+                  )}
                 </div>
               </div>
 

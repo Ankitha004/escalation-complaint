@@ -1,11 +1,29 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { ShieldCheck, LogOut, User, Bell, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import API from '../services/api';
 
 const Navbar = ({ activeTabTitle }) => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await API.get('/notifications');
+        const list = res.data || [];
+        const unread = list.filter(n => !n.isRead).length;
+        setUnreadCount(unread);
+      } catch (err) {
+        // silent fallback
+      }
+    };
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -59,7 +77,22 @@ const Navbar = ({ activeTabTitle }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <Link to="/notifications" style={{ textDecoration: 'none', position: 'relative', width: '38px', height: '38px', borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', transition: 'all 0.2s ease' }}>
           <Bell size={18} />
-          <span style={{ position: 'absolute', top: '4px', right: '4px', width: '8px', height: '8px', borderRadius: '50%', background: '#F43F5E' }} />
+          {unreadCount > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: '-2px',
+              right: '-2px',
+              background: '#EF4444',
+              color: '#FFFFFF',
+              fontSize: '0.65rem',
+              fontWeight: '800',
+              padding: '1px 5px',
+              borderRadius: '10px',
+              border: '2px solid #FFFFFF'
+            }}>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
         </Link>
 
         <div className="app-user-pill">

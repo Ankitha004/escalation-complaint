@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
+import ManagerSidebar from '../components/ManagerSidebar';
 import API from '../services/api';
 import DOMPurify from 'dompurify';
 import { 
@@ -19,7 +20,10 @@ import {
   AlertTriangle,
   LayoutDashboard,
   UserCheck,
-  XCircle
+  XCircle,
+  Sparkles,
+  Wand2,
+  Bot
 } from 'lucide-react';
 
 const ManagerComplaintDetails = () => {
@@ -47,10 +51,15 @@ const ManagerComplaintDetails = () => {
     setLoading(true);
     setError('');
     try {
-      const [resDetails, resTLs] = await Promise.all([
-        API.get(`/manager/complaints/${id}`),
-        API.get('/hr/team-leaders').catch(() => ({ data: [] }))
-      ]);
+      let resDetails;
+      try {
+        resDetails = await API.get(`/manager/complaints/${id}`);
+      } catch (mgrErr) {
+        const fallbackRes = await API.get(`/complaints/${id}`);
+        resDetails = { data: { complaint: fallbackRes.data, escalationLogs: fallbackRes.data.escalationLogs || [] } };
+      }
+      
+      const resTLs = await API.get('/hr/team-leaders').catch(() => ({ data: [] }));
 
       const data = resDetails.data || {};
       setComplaint(data.complaint || null);
@@ -63,7 +72,7 @@ const ManagerComplaintDetails = () => {
       setTeamLeaders(tls.map(t => ({ id: t._id, name: t.name, employeeId: t.employeeId })));
     } catch (err) {
       console.warn('Fetch manager complaint notice:', err);
-      setError(err.response?.data?.message || 'Complaint not found or access restricted.');
+      setError(err.response?.data?.message || 'Complaint record not found or access restricted.');
     } finally {
       setLoading(false);
     }
@@ -159,10 +168,11 @@ const ManagerComplaintDetails = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-canvas)' }}>
-      <Navbar activeTabTitle="Department Manager — Complaint Review" />
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <ManagerSidebar activeTab="complaints" />
 
-      <div style={{ padding: '2rem 2.5rem', maxWidth: '1280px', width: '100%', margin: '0 auto' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        <main style={{ padding: '2rem 2.5rem', maxWidth: '1400px', width: '100%', margin: '0 auto' }}>
         {/* HEADER BAR */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
@@ -190,13 +200,27 @@ const ManagerComplaintDetails = () => {
             <RefreshCw size={32} className="spin-icon" style={{ color: '#4F46E5', marginBottom: '0.75rem' }} />
             <div style={{ fontWeight: '700', fontSize: '1rem', color: '#0F172A' }}>Loading complaint details...</div>
           </div>
-        ) : error ? (
-          <div className="alert-box alert-danger" style={{ maxWidth: '600px', margin: '2rem auto', padding: '1.5rem', textAlign: 'center', display: 'block' }}>
-            <AlertCircle size={36} style={{ margin: '0 auto 0.5rem auto' }} />
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '800' }}>Access Denied</h3>
-            <p style={{ fontSize: '0.9rem', margin: 0 }}>{error}</p>
+        ) : error || !complaint ? (
+          <div style={{ padding: '3rem 2rem', maxWidth: '600px', width: '100%', margin: '0 auto', textAlign: 'center' }}>
+            <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '2.5rem', borderRadius: '16px', boxShadow: '0 4px 12px rgba(15,23,42,0.05)' }}>
+              <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem auto' }}>
+                <AlertCircle size={30} />
+              </div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: '0 0 0.5rem 0' }}>Complaint Not Found</h3>
+              <p style={{ color: '#64748B', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.4' }}>
+                {error || 'The requested complaint ticket could not be located or may have been deleted.'}
+              </p>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button onClick={() => navigate('/manager-sla')} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#4F46E5', color: '#FFFFFF', padding: '0.75rem 1.25rem', borderRadius: '10px', fontWeight: '700', fontSize: '0.85rem', border: 'none', cursor: 'pointer' }}>
+                  <ArrowLeft size={16} /> Return to Manager Dashboard
+                </button>
+                <button onClick={() => navigate('/dashboard')} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#F1F5F9', color: '#475569', padding: '0.75rem 1.25rem', borderRadius: '10px', fontWeight: '700', fontSize: '0.85rem', border: '1px solid #CBD5E1', cursor: 'pointer' }}>
+                  <LayoutDashboard size={16} /> Go to Dashboard
+                </button>
+              </div>
+            </div>
           </div>
-        ) : complaint && (
+        ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.75rem', alignItems: 'start' }}>
             
             {/* LEFT COLUMN */}
@@ -223,7 +247,7 @@ const ManagerComplaintDetails = () => {
                     Issue Description
                   </h4>
                   <div style={{ color: '#334155', fontSize: '0.95rem', lineHeight: '1.65', background: '#F8FAFC', padding: '1.25rem', borderRadius: '14px', border: '1px solid var(--border-color)', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(complaint.description) }} />
+                    <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(complaint.description) }} />
                   </div>
                 </div>
 
@@ -452,7 +476,7 @@ const ManagerComplaintDetails = () => {
               )}
 
               {/* CONTRIBUTORS / WORK HISTORY CARD */}
-              {(complaint.status === 'Resolved' || complaint.status === 'Closed' || complaint.status === 'Approved' || complaint.status === 'Pending HR Review') && (
+              {(complaint.status === 'Resolved' || complaint.status === 'Closed' || complaint.status === 'Approved' || complaint.status === 'Pending HR Review' || true) && (
                 <div className="content-card" style={{ padding: '1.35rem' }}>
                   <h4 style={{ fontSize: '0.95rem', fontWeight: '800', color: '#0F172A', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.65rem', fontFamily: "'Outfit', sans-serif" }}>
                     Ticket Contributors / Work History
@@ -461,45 +485,63 @@ const ManagerComplaintDetails = () => {
                     {(() => {
                       const actors = new Map();
                       
+                      const cleanName = (val, fallback = 'Team Member') => {
+                        if (!val) return null;
+                        if (typeof val === 'object') {
+                          return val.name || val.employeeId || fallback;
+                        }
+                        if (typeof val === 'string') {
+                          const str = val.trim();
+                          if (/^[0-9a-fA-F]{24}$/.test(str)) {
+                            if (complaint.departmentManager?.name && (complaint.departmentManager._id === str || complaint.departmentManager === str)) {
+                              return complaint.departmentManager.name;
+                            }
+                            if (complaint.assignedTeamLeader?.name && (complaint.assignedTeamLeader._id === str || complaint.assignedTeamLeader === str)) {
+                              return complaint.assignedTeamLeader.name;
+                            }
+                            if (complaint.createdBy?.name && (complaint.createdBy._id === str || complaint.createdBy === str)) {
+                              return complaint.createdBy.name;
+                            }
+                            return fallback;
+                          }
+                          return str;
+                        }
+                        return fallback;
+                      };
+
                       // Creator / Requester
-                      if (complaint.staffName) {
-                        actors.set(complaint.staffName, 'Raised Complaint');
-                      }
-                      
+                      const staffNameStr = cleanName(complaint.staffName || complaint.createdBy, 'Staff Member');
+                      if (staffNameStr) actors.set(staffNameStr, 'Raised Complaint');
+
                       // Assigned TL
-                      if (complaint.teamLeader && complaint.teamLeader !== 'Unassigned') {
-                        actors.set(complaint.teamLeader, 'Assigned Team Leader');
-                      }
-                      
+                      const tlNameStr = cleanName(complaint.assignedTeamLeader || complaint.teamLeader, 'Team Leader');
+                      if (tlNameStr && tlNameStr !== 'Unassigned') actors.set(tlNameStr, 'Assigned Team Leader');
+
                       // Department Manager
-                      if (complaint.departmentManager && complaint.departmentManager !== 'Unassigned') {
-                        actors.set(complaint.departmentManager, 'Department Manager');
-                      }
+                      const mgrNameStr = cleanName(complaint.departmentManager, 'Department Manager');
+                      if (mgrNameStr && mgrNameStr !== 'Unassigned') actors.set(mgrNameStr, 'Department Manager');
 
                       // Commenters
                       if (complaint.comments && Array.isArray(complaint.comments)) {
                         complaint.comments.forEach(c => {
-                          if (c.senderName) {
-                            actors.set(c.senderName, `${c.senderRole} (Commented)`);
-                          }
+                          const senderStr = cleanName(c.senderName || c.user, c.senderRole || 'Commenter');
+                          if (senderStr) actors.set(senderStr, `${c.senderRole || 'User'} (Commented)`);
                         });
                       }
 
                       // Solver Reports
                       if (complaint.resolutionReports && Array.isArray(complaint.resolutionReports)) {
                         complaint.resolutionReports.forEach(r => {
-                          if (r.solverName) {
-                            actors.set(r.solverName, `${r.solverRole} (Submitted Report)`);
-                          }
+                          const solverStr = cleanName(r.solverName || r.solverId, r.solverRole || 'Resolution Officer');
+                          if (solverStr) actors.set(solverStr, `${r.solverRole || 'Officer'} (Submitted Report)`);
                         });
                       }
 
                       // Timeline update actors
                       if (complaint.timeline && Array.isArray(complaint.timeline)) {
                         complaint.timeline.forEach(t => {
-                          if (t.updatedByName) {
-                            actors.set(t.updatedByName, 'Updated Complaint');
-                          }
+                          const updaterStr = cleanName(t.updatedByName || t.updatedBy, 'Department Manager');
+                          if (updaterStr) actors.set(updaterStr, 'Updated Complaint');
                         });
                       }
 
@@ -553,6 +595,7 @@ const ManagerComplaintDetails = () => {
 
           </div>
         )}
+        </main>
       </div>
     </div>
   );

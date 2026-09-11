@@ -1,14 +1,18 @@
 const Complaint = require('../models/Complaint');
 const User = require('../models/User');
 const { getSlaThresholdMinutes } = require('../services/escalationService');
-const { createNotification } = require('../services/notificationService');
+const { createNotification, notifyHRAndSuperAdminOnResolution } = require('../services/notificationService');
 
 // Helper: Check if TL is authorized for this complaint
 const isAuthorizedForTLComplaint = async (complaint, tlUser) => {
   if (!tlUser) return false;
-  if (['Super Admin', 'Manager', 'HR', 'Team Leader'].includes(tlUser.role)) return true;
 
-  const tlId = tlUser._id.toString();
+  const roleLower = (tlUser.role || '').trim().toLowerCase();
+  if (['super admin', 'manager', 'hr', 'team leader'].includes(roleLower)) {
+    return true;
+  }
+
+  const tlId = tlUser._id ? tlUser._id.toString() : '';
   const tlEmpId = (tlUser.employeeId || '').trim().toLowerCase();
   const tlName = (tlUser.name || '').trim().toLowerCase();
 
@@ -18,7 +22,13 @@ const isAuthorizedForTLComplaint = async (complaint, tlUser) => {
     : complaint.assignedTeamLeader?.toString();
   if (assignedTlId && assignedTlId === tlId) return true;
 
-  // 2. Legacy / String teamLeader field on Complaint
+  // 2. Creator is the TL
+  const creatorId = complaint.createdBy?._id
+    ? complaint.createdBy._id.toString()
+    : complaint.createdBy?.toString();
+  if (creatorId && creatorId === tlId) return true;
+
+  // 3. Legacy / String teamLeader field on Complaint
   if (complaint.teamLeader) {
     const complaintTL = complaint.teamLeader.trim().toLowerCase();
     if (complaintTL === tlName || (tlEmpId && complaintTL === tlEmpId) || complaintTL === tlId.toLowerCase()) {
@@ -26,7 +36,7 @@ const isAuthorizedForTLComplaint = async (complaint, tlUser) => {
     }
   }
 
-  // 3. Department matching
+  // 4. Department matching
   if (tlUser.department && complaint.responsibleDepartment) {
     const deptId = complaint.responsibleDepartment?._id 
       ? complaint.responsibleDepartment._id.toString() 
@@ -37,7 +47,7 @@ const isAuthorizedForTLComplaint = async (complaint, tlUser) => {
     if (deptId === userDeptId) return true;
   }
 
-  // 4. Staff reporting to this TL
+  // 5. Staff reporting to this TL
   if (complaint.staffId) {
     const staffUser = await User.findOne({ employeeId: complaint.staffId });
     if (staffUser) {
@@ -51,9 +61,9 @@ const isAuthorizedForTLComplaint = async (complaint, tlUser) => {
     }
   }
 
-  // 5. Creator user reporting to this TL
+  // 6. Creator user reporting to this TL
   if (complaint.createdBy) {
-    const creatorUser = await User.findById(complaint.createdBy);
+    const creatorUser = await User.findById(creatorId);
     if (creatorUser) {
       if (creatorUser.teamLeader && creatorUser.teamLeader.toString() === tlId) return true;
       if (creatorUser.legacyTeamLeader) {
@@ -67,6 +77,7 @@ const isAuthorizedForTLComplaint = async (complaint, tlUser) => {
 
   return false;
 };
+
 // Helper to escape regex special characters
 const escapeRegExp = (string) => {
   return string ? string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '';
@@ -133,11 +144,10 @@ const getTLComplaints = async (req, res, next) => {
     // Query complaints for TL
     let rawComplaints = await Complaint.find({
       $or: complaintQuery
-    }).sort({ createdAt: -1 }).lean();
+    }).sort({ createdAt: -1 }).populate('createdBy', 'name employeeId role department designation').lean();
 
-    // Fallback: If no complaints matched strict TL filter, fetch all system complaints
-    if (!rawComplaints || rawComplaints.length === 0) {
-      rawComplaints = await Complaint.find({}).sort({ createdAt: -1 }).lean();
+    if (!rawComplaints) {
+      rawComplaints = [];
     }
 
 
@@ -359,22 +369,21 @@ const updateTLComplaintStatus = async (req, res, next) => {
 
     const updated = await complaint.save();
 
-    // Notify the staff and department manager if resolved
-    if (newStatus === 'Resolved') {
-      if (complaint.createdBy) {
-        await createNotification(
-          complaint.createdBy,
-          `Your complaint (${complaint.complaintId}) has been resolved by Team Leader ${req.user.name}.`,
-          complaint._id
-        );
-      }
-      if (complaint.departmentManager) {
-        await createNotification(
-          complaint.departmentManager,
-          `Complaint ${complaint.complaintId} has been resolved by Team Leader ${req.user.name}.`,
-          complaint._id
-        );
-      }
+    // Notify complainant staff on all status updates
+    if (updated.createdBy) {
+      await createNotification(
+        updated.createdBy,
+        `Your complaint #${updated.complaintId} status was updated to "${newStatus}" by Team Leader ${req.user.name}.`,
+        updated._id
+      );
+    }
+    if (newStatus === 'Resolved' && updated.departmentManager) {
+      await createNotification(
+        updated.departmentManager,
+        `Complaint #${updated.complaintId} has been resolved by Team Leader ${req.user.name}.`,
+        updated._id
+      );
+      await notifyHRAndSuperAdminOnResolution(updated, req.user ? req.user.name : '');
     }
 
     res.json(updated);
@@ -432,6 +441,16 @@ const addTLComment = async (req, res, next) => {
     });
 
     const updated = await complaint.save();
+
+    // Notify complainant staff
+    if (updated.createdBy) {
+      await createNotification(
+        updated.createdBy,
+        `Team Leader ${req.user.name} commented on your complaint #${updated.complaintId}.`,
+        updated._id
+      );
+    }
+
     res.json(updated);
   } catch (error) {
     next(error);
@@ -470,7 +489,7 @@ const submitResolutionReport = async (req, res, next) => {
       throw new Error('Not authorized to modify this complaint');
     }
 
-    complaint.status = 'Resolved';
+    complaint.status = 'Pending HR Review';
     complaint.resolvedDate = new Date();
 
     complaint.resolutionReports.push({
@@ -478,13 +497,13 @@ const submitResolutionReport = async (req, res, next) => {
       solverName: req.user.name,
       solverRole: 'Team Leader',
       reportText: reportText,
-      forwardedTo: 'Manager',
+      forwardedTo: 'HR',
       isReviewed: false
     });
 
     complaint.timeline.push({
       title: 'Resolution Report Submitted',
-      description: `Team Leader ${req.user.name} solved the issue and submitted a report for Manager review.`,
+      description: `Team Leader ${req.user.name} solved the issue and submitted a report for HR review.`,
       updatedBy: req.user._id,
       updatedByName: req.user.name,
       timestamp: new Date()
@@ -492,7 +511,7 @@ const submitResolutionReport = async (req, res, next) => {
 
     const updated = await complaint.save();
     
-    // Notify Manager
+    // Notify Manager, HR, and Super Admin
     if (complaint.departmentManager) {
       await createNotification(
         complaint.departmentManager,
@@ -500,6 +519,7 @@ const submitResolutionReport = async (req, res, next) => {
         complaint._id
       );
     }
+    await notifyHRAndSuperAdminOnResolution(updated, req.user ? req.user.name : '');
 
     res.json({ message: 'Resolution report submitted successfully', complaint: updated });
   } catch (error) {
@@ -569,6 +589,7 @@ const manualEscalate = async (req, res, next) => {
 };
 
 module.exports = {
+  isAuthorizedForTLComplaint,
   getTLComplaints,
   getTLMyStaff,
   getTLComplaintById,

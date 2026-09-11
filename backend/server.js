@@ -30,6 +30,7 @@ const managerRoutes = require('./routes/manager');
 const attendanceRoutes = require('./routes/attendance');
 const leavesRoutes = require('./routes/leaves');
 const adminRoutes = require('./routes/admin');
+const announcementRoutes = require('./routes/announcements');
 
 const app = express();
 
@@ -66,6 +67,7 @@ app.use('/api/manager', managerRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leaves', leavesRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/announcements', announcementRoutes);
 
 app.get('/', (req, res) => {
   res.send('Complaint Management System API is Running...');
@@ -84,13 +86,19 @@ const migrateDatabase = async () => {
     // 1. Update any 'Employee' role to 'Staff'
     await User.updateMany({ role: 'Employee' }, { role: 'Staff' });
 
-    // 2. Resolve teamLeader stored as name (e.g. "Tarun") to TL Employee ID (e.g. "TL001") or ObjectId
+    // 2. Resolve teamLeader stored as string name (e.g. "Tarun") or employeeId (e.g. "TL001") to valid ObjectId
     const teamLeaders = await User.find({ role: 'Team Leader' });
     for (const tl of teamLeaders) {
       if (tl.name) {
-        await User.updateMany(
+        await User.collection.updateMany(
           { teamLeader: tl.name },
-          { teamLeader: tl.employeeId || tl._id.toString() }
+          { $set: { teamLeader: tl._id, legacyTeamLeader: tl.name } }
+        );
+      }
+      if (tl.employeeId) {
+        await User.collection.updateMany(
+          { teamLeader: tl.employeeId },
+          { $set: { teamLeader: tl._id, legacyTeamLeader: tl.employeeId } }
         );
       }
     }

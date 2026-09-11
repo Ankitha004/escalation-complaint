@@ -9,6 +9,7 @@ import API from '../services/api';
 import { 
   Bell, 
   CheckSquare, 
+  Trash2,
   Settings, 
   AlertTriangle, 
   FileText, 
@@ -27,80 +28,30 @@ const NotificationsPage = () => {
 
   const [activeTab, setActiveTab] = useState('All');
   const [loading, setLoading] = useState(true);
-
-  const defaultNotifications = [
-    {
-      id: '1',
-      type: 'Escalations',
-      icon: Bell,
-      iconColor: '#EA580C',
-      bgColor: '#FFEDD5',
-      title: 'Complaint Escalated',
-      isNew: true,
-      message: 'Complaint CMP0002 has been escalated to Department Manager for priority review.',
-      highlightId: 'CMP0002',
-      time: '2 hours ago'
-    },
-    {
-      id: '2',
-      type: 'Updates',
-      icon: FileText,
-      iconColor: '#8B5CF6',
-      bgColor: '#F3E8FF',
-      title: 'Complaint Submitted',
-      isNew: true,
-      message: 'Complaint CMP0003 has been registered in the system.',
-      highlightId: 'CMP0003',
-      time: '5 hours ago'
-    },
-    {
-      id: '3',
-      type: 'Updates',
-      icon: MessageSquare,
-      iconColor: '#0284C7',
-      bgColor: '#E0F2FE',
-      title: 'Update on Ticket CMP0001',
-      isNew: false,
-      message: 'Complaint CMP0001 status updated by resolution team.',
-      highlightId: 'CMP0001',
-      time: '1 day ago'
-    },
-    {
-      id: '4',
-      type: 'System',
-      icon: CheckCircle2,
-      iconColor: '#16A34A',
-      bgColor: '#DCFCE7',
-      title: 'SLA Rule Evaluation Completed',
-      isNew: false,
-      message: 'SLA background monitor evaluated active complaints successfully.',
-      highlightId: 'CMP0005',
-      time: '2 days ago'
-    }
-  ];
-
-  const [notifications, setNotifications] = useState(defaultNotifications);
+  const [notifications, setNotifications] = useState([]);
 
   const fetchNotifications = async () => {
     setLoading(true);
     try {
       const res = await API.get('/notifications');
       const data = res.data || [];
-      if (Array.isArray(data) && data.length > 0) {
-        const mapped = data.map((n, i) => ({
+      const mapped = data.map((n, i) => {
+        const relatedCompId = n.relatedComplaint?._id || n.relatedComplaint;
+        const compDisplayId = n.relatedComplaint?.complaintId || n.complaintId;
+        return {
           id: n._id || String(i),
-          type: n.type || 'Updates',
-          icon: n.type === 'Escalations' ? Bell : n.type === 'System' ? CheckCircle2 : MessageSquare,
-          iconColor: n.type === 'Escalations' ? '#EA580C' : '#8B5CF6',
-          bgColor: n.type === 'Escalations' ? '#FFEDD5' : '#F3E8FF',
-          title: n.title || 'Notification',
-          isNew: !n.read,
+          type: n.type === 'broadcast' ? 'System' : (n.type || 'Updates'),
+          icon: n.type === 'broadcast' ? Bell : n.type === 'Escalations' ? Bell : MessageSquare,
+          iconColor: n.type === 'broadcast' ? '#EA580C' : '#8B5CF6',
+          bgColor: n.type === 'broadcast' ? '#FFEDD5' : '#F3E8FF',
+          title: n.title || (compDisplayId ? `Complaint Alert (#${compDisplayId})` : 'System Alert'),
+          isNew: !n.isRead,
           message: n.message || n.text || 'System update notification',
-          highlightId: n.complaintId || n.ticketId || 'CMP0002',
+          highlightId: relatedCompId || compDisplayId,
           time: n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently'
-        }));
-        setNotifications(mapped);
-      }
+        };
+      });
+      setNotifications(mapped);
     } catch (err) {
       console.warn('Fetch notifications notice:', err);
     } finally {
@@ -112,19 +63,59 @@ const NotificationsPage = () => {
     fetchNotifications();
   }, []);
 
-  const handleMarkAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isNew: false })));
+  const handleMarkAllRead = async () => {
+    try {
+      await API.put('/notifications/read-all');
+      setNotifications(prev => prev.map(n => ({ ...n, isNew: false })));
+    } catch (err) {
+      console.warn('Failed to mark all notifications read:', err);
+      setNotifications(prev => prev.map(n => ({ ...n, isNew: false })));
+    }
   };
 
-  const handleNotificationClick = (item) => {
-    if (!item.highlightId) return;
-    const role = user?.role || 'Staff';
-    if (role === 'Manager') {
-      navigate(`/manager-complaint-details/${item.highlightId}`);
-    } else if (role === 'Team Leader') {
-      navigate(`/tl-complaint-details/${item.highlightId}`);
-    } else {
-      navigate(`/complaint-details/${item.highlightId}`);
+  const handleClearAll = async () => {
+    if (!window.confirm('Are you sure you want to clear all notifications?')) return;
+    try {
+      await API.delete('/notifications/clear-all');
+      setNotifications([]);
+    } catch (err) {
+      console.warn('Failed to clear notifications:', err);
+      setNotifications([]);
+    }
+  };
+
+  const handleDeleteNotification = async (e, id) => {
+    e.stopPropagation();
+    try {
+      await API.delete(`/notifications/${id}`);
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch (err) {
+      console.warn('Failed to delete notification:', err);
+    }
+  };
+
+  const handleNotificationClick = async (item) => {
+    if (item.isNew && item.id) {
+      try {
+        await API.put(`/notifications/${item.id}/read`);
+        setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, isNew: false } : n));
+      } catch (err) {
+        console.warn('Failed to mark notification read:', err);
+      }
+    }
+    if (item.highlightId) {
+      const role = user?.role || 'Staff';
+      if (role === 'Manager') {
+        navigate(`/manager-complaint-details/${item.highlightId}`);
+      } else if (role === 'Team Leader') {
+        navigate(`/tl-complaint-details/${item.highlightId}`);
+      } else if (role === 'Super Admin') {
+        navigate(`/super-admin-complaint-details/${item.highlightId}`);
+      } else if (role === 'HR') {
+        navigate(`/hr-complaint-details/${item.highlightId}`);
+      } else {
+        navigate(`/complaint-details/${item.highlightId}`);
+      }
     }
   };
 
@@ -214,13 +205,18 @@ const NotificationsPage = () => {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <button onClick={handleMarkAllRead} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: '#FFFFFF', color: '#334155', border: '1px solid #E2E8F0', padding: '0.6rem 1.1rem', borderRadius: '10px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15,23,42,0.04)' }}>
-                <CheckSquare size={16} style={{ color: '#475569' }} />
-                <span>Mark all as read</span>
-              </button>
-              <button style={{ width: '38px', height: '38px', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15,23,42,0.04)' }}>
-                <Settings size={18} />
-              </button>
+              {notifications.length > 0 && (
+                <>
+                  <button onClick={handleMarkAllRead} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: '#FFFFFF', color: '#334155', border: '1px solid #E2E8F0', padding: '0.6rem 1.1rem', borderRadius: '10px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 2px 4px rgba(15,23,42,0.04)' }}>
+                    <CheckSquare size={16} style={{ color: '#475569' }} />
+                    <span>Mark all as read</span>
+                  </button>
+                  <button onClick={handleClearAll} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: '#FEF2F2', color: '#DC2626', border: '1px solid #FCA5A5', padding: '0.6rem 1.1rem', borderRadius: '10px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 2px 4px rgba(220,38,38,0.04)' }}>
+                    <Trash2 size={16} />
+                    <span>Clear all</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -261,8 +257,17 @@ const NotificationsPage = () => {
                       <p style={{ fontSize: '0.84rem', color: '#475569', margin: '4px 0 0 0', lineHeight: '1.3' }}>{item.message}</p>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', color: '#94A3B8', fontSize: '0.78rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: '#94A3B8', fontSize: '0.78rem' }}>
                     <span>{item.time}</span>
+                    <button 
+                      onClick={(e) => handleDeleteNotification(e, item.id)} 
+                      title="Delete notification"
+                      style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#EF4444'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                     <ChevronRight size={18} style={{ color: '#CBD5E1' }} />
                   </div>
                 </div>
@@ -270,13 +275,15 @@ const NotificationsPage = () => {
             })}
           </div>
 
-          <div style={{ marginTop: '1.5rem', padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(15,23,42,0.02)' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#EFF6FF', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
-              <Bell size={32} />
+          {filteredNotifications.length === 0 && (
+            <div style={{ marginTop: '1.5rem', padding: '2.5rem 1.5rem', textAlign: 'center', background: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(15,23,42,0.02)' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#EFF6FF', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+                <Bell size={32} />
+              </div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: '0 0 0.35rem 0' }}>You're all caught up! 🎉</h3>
+              <p style={{ fontSize: '0.86rem', color: '#64748B', margin: 0 }}>We'll notify you when there are new updates.</p>
             </div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: '0 0 0.35rem 0' }}>You're all caught up! 🎉</h3>
-            <p style={{ fontSize: '0.86rem', color: '#64748B', margin: 0 }}>We'll notify you when there are new updates.</p>
-          </div>
+          )}
         </main>
       </div>
     </div>

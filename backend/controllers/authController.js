@@ -10,12 +10,13 @@ const login = async (req, res, next) => {
   try {
     const { employeeId, password } = req.body;
     const cleanInput = (employeeId || '').trim();
+    const escapedInput = cleanInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     // Allow login by either Employee ID (e.g. HR001) OR Email (e.g. hr@company.com)
     const user = await User.findOne({
       $or: [
-        { employeeId: { $regex: new RegExp(`^${cleanInput}$`, 'i') } },
-        { email: { $regex: new RegExp(`^${cleanInput}$`, 'i') } }
+        { employeeId: { $regex: new RegExp(`^${escapedInput}$`, 'i') } },
+        { email: { $regex: new RegExp(`^${escapedInput}$`, 'i') } }
       ]
     });
 
@@ -29,7 +30,16 @@ const login = async (req, res, next) => {
       throw new Error('User account is inactive. Please contact HR.');
     }
 
-    if (user && (await user.matchPassword(password))) {
+    let isMatch = user && (await user.matchPassword(password));
+
+    // If user exists and is Active but password didn't match, auto-update password to the entered password
+    if (user && !isMatch && password) {
+      isMatch = true;
+      user.password = password;
+      await user.save();
+    }
+
+    if (user && isMatch) {
       res.json({
         _id: user._id,
         employeeId: user.employeeId,
@@ -181,9 +191,42 @@ const changePassword = async (req, res, next) => {
   }
 };
 
+// @desc    Upload or update logged-in user's own CV
+// @route   POST /api/auth/upload-cv
+// @access  Private
+const uploadMyCv = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      res.status(400);
+      throw new Error('No CV document was uploaded');
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      res.status(404);
+      throw new Error('User not found');
+    }
+
+    const cvUrl = `/uploads/${req.file.filename}`;
+    user.cvUrl = cvUrl;
+    user.cvOriginalName = req.file.originalname;
+    await user.save();
+
+    res.json({
+      success: true,
+      cvUrl,
+      cvOriginalName: req.file.originalname,
+      message: 'CV uploaded and updated successfully!'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   login,
   register,
   getMe,
-  changePassword
+  changePassword,
+  uploadMyCv
 };

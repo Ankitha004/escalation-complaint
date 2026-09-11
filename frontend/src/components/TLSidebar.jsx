@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { 
+  ShieldCheck,
   Home,
   FileSearch,
   List,
@@ -10,11 +11,11 @@ import {
   Users,
   LineChart,
   Calendar,
-  CalendarDays,
   Bell,
   Megaphone,
   User,
-  LogOut
+  LogOut,
+  Sparkles
 } from 'lucide-react';
 
 const TLSidebar = ({ activeTab = 'dashboard' }) => {
@@ -52,14 +53,13 @@ const TLSidebar = ({ activeTab = 'dashboard' }) => {
     {
       title: 'LEAVE MANAGEMENT',
       items: [
-        { id: 'leaves', label: 'Leave Requests', path: '/tl-leaves', icon: Calendar },
-        { id: 'tl-leave-calendar', label: 'Leave Calendar', path: '/tl-leave-calendar', icon: CalendarDays }
+        { id: 'leaves', label: 'Leave Requests', path: '/tl-leaves', icon: Calendar }
       ]
     },
     {
       title: 'COMMUNICATION',
       items: [
-        { id: 'notifications', label: 'Notifications', path: '/notifications', icon: Bell, badge: 8 },
+        { id: 'notifications', label: 'Notifications', path: '/notifications', icon: Bell },
         { id: 'tl-announcements', label: 'Announcements', path: '/tl-announcements', icon: Megaphone }
       ]
     },
@@ -73,31 +73,55 @@ const TLSidebar = ({ activeTab = 'dashboard' }) => {
 
   return (
     <aside style={{ 
-      width: '260px', 
-      background: '#020617', 
-      color: '#94A3B8', 
+      width: '280px', 
+      background: 'linear-gradient(180deg, #0F172A 0%, #1E3A8A 100%)', 
+      borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+      color: '#F8FAFC', 
       display: 'flex', 
       flexDirection: 'column', 
       flexShrink: 0, 
       minHeight: '100vh',
-      fontFamily: "'Inter', sans-serif"
+      fontFamily: "'Plus Jakarta Sans', sans-serif"
     }}>
-      <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
-        
-        {navGroups.map((group, groupIndex) => (
+      {/* BRAND HEADER */}
+      <div style={{ padding: '2rem 1.5rem 1.25rem 1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ 
+            width: '42px', 
+            height: '42px', 
+            borderRadius: '12px', 
+            background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            boxShadow: '0 4px 12px rgba(37,99,235,0.35)' 
+          }}>
+            <ShieldCheck size={24} style={{ color: '#FFFFFF' }} />
+          </div>
+          <div>
+            <div style={{ fontSize: '1.25rem', fontWeight: '800', fontFamily: "'Outfit', sans-serif", color: '#FFFFFF' }}>Team Leader</div>
+            <div style={{ fontSize: '0.75rem', color: '#93C5FD' }}>Escalation Complaint System</div>
+          </div>
+        </div>
+      </div>
+
+      {/* SCROLLABLE NAVIGATION */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 1.25rem 1.5rem 1.25rem' }}>
+        {navGroups.map((group) => (
           <div key={group.title} style={{ marginBottom: '1.25rem' }}>
             <div style={{ 
               fontSize: '0.65rem', 
-              fontWeight: '700', 
-              color: '#64748B', 
-              letterSpacing: '0.05em', 
+              fontWeight: '800', 
+              color: '#94A3B8', 
+              letterSpacing: '0.08em', 
               marginBottom: '0.5rem',
-              paddingLeft: '0.5rem'
+              paddingLeft: '0.75rem',
+              textTransform: 'uppercase'
             }}>
               {group.title}
             </div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const isDashboardRoute = location.pathname === '/dashboard';
@@ -113,22 +137,23 @@ const TLSidebar = ({ activeTab = 'dashboard' }) => {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
+                      justify: 'space-between',
                       width: '100%',
-                      padding: '0.6rem 0.75rem',
-                      borderRadius: '8px',
+                      padding: '0.75rem 1rem',
+                      borderRadius: '12px',
                       border: 'none',
-                      background: isActive ? '#2563EB' : 'transparent',
+                      background: isActive ? 'linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%)' : 'transparent',
                       color: isActive ? '#FFFFFF' : '#CBD5E1',
-                      fontWeight: isActive ? '600' : '500',
-                      fontSize: '0.85rem',
+                      fontWeight: isActive ? '700' : '600',
+                      fontSize: '0.88rem',
                       cursor: 'pointer',
                       textAlign: 'left',
+                      boxShadow: isActive ? '0 4px 12px rgba(37,99,235,0.3)' : 'none',
                       transition: 'all 0.2s ease'
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
-                        e.currentTarget.style.background = '#0F172A';
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                         e.currentTarget.style.color = '#FFFFFF';
                       }
                     }}
@@ -143,22 +168,6 @@ const TLSidebar = ({ activeTab = 'dashboard' }) => {
                       <Icon size={18} style={{ color: isActive ? '#FFFFFF' : '#94A3B8' }} /> 
                       {item.label}
                     </div>
-                    {item.badge && (
-                      <span style={{ 
-                        background: '#EF4444', 
-                        color: '#FFF', 
-                        fontSize: '0.65rem', 
-                        fontWeight: '800', 
-                        width: '18px', 
-                        height: '18px', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        borderRadius: '50%'
-                      }}>
-                        {item.badge}
-                      </span>
-                    )}
                   </button>
                 );
               })}
@@ -167,34 +176,64 @@ const TLSidebar = ({ activeTab = 'dashboard' }) => {
         ))}
       </div>
 
-      <div style={{ padding: '1.25rem', borderTop: '1px solid #1E293B' }}>
+      {/* USER PROFILE & LOGOUT FOOTER */}
+      <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', background: 'rgba(0,0,0,0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ 
+              width: '36px', 
+              height: '36px', 
+              borderRadius: '50%', 
+              background: '#2563EB', 
+              color: '#FFFFFF', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              fontWeight: '800',
+              fontSize: '0.9rem',
+              boxShadow: '0 2px 6px rgba(37,99,235,0.4)'
+            }}>
+              {user?.name?.charAt(0) || 'T'}
+            </div>
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '130px' }}>
+                {user?.name || 'Team Leader'}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#93C5FD', fontWeight: '500' }}>
+                {user?.employeeId || 'TL'}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <button 
           onClick={handleLogout} 
           style={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: '0.6rem', 
+            justifyContent: 'center',
+            gap: '0.5rem', 
             width: '100%', 
-            padding: '0.65rem 1rem', 
-            background: 'transparent', 
-            color: '#94A3B8', 
-            border: 'none', 
-            borderRadius: '8px', 
+            padding: '0.6rem 1rem', 
+            background: 'rgba(239, 68, 68, 0.12)', 
+            color: '#FCA5A5', 
+            border: '1px solid rgba(239, 68, 68, 0.25)', 
+            borderRadius: '10px', 
             fontSize: '0.85rem', 
-            fontWeight: '600', 
+            fontWeight: '700', 
             cursor: 'pointer',
             transition: 'all 0.2s ease'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#0F172A';
-            e.currentTarget.style.color = '#EF4444';
+            e.currentTarget.style.background = '#EF4444';
+            e.currentTarget.style.color = '#FFFFFF';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = '#94A3B8';
+            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
+            e.currentTarget.style.color = '#FCA5A5';
           }}
         >
-          <LogOut size={18} /> Logout
+          <LogOut size={16} /> Logout
         </button>
       </div>
     </aside>

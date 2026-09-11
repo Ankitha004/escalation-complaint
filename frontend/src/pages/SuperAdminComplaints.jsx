@@ -446,7 +446,10 @@ const SuperAdminComplaints = () => {
                         {/* TICKET ID & PRIORITY */}
                         <td style={{ padding: '1.15rem 1.25rem', minWidth: '150px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: '0.85rem', fontWeight: '800', color: '#2563EB' }}>
+                            <span 
+                              onClick={() => navigate(`/superadmin-complaint-details/${c._id}`)}
+                              style={{ fontFamily: "'Outfit', sans-serif", fontSize: '0.85rem', fontWeight: '800', color: '#2563EB', cursor: 'pointer' }}
+                            >
                               {c.complaintId}
                             </span>
                             {c.escalatedToSuperAdmin && (
@@ -464,7 +467,10 @@ const SuperAdminComplaints = () => {
 
                         {/* SUBJECT & CATEGORY */}
                         <td style={{ padding: '1.15rem 1.25rem', minWidth: '220px', maxWidth: '280px' }}>
-                          <div style={{ fontWeight: '700', color: '#0F172A', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div 
+                            onClick={() => navigate(`/superadmin-complaint-details/${c._id}`)}
+                            style={{ fontWeight: '700', color: '#0F172A', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
+                          >
                             {c.subject}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '3px' }}>
@@ -543,8 +549,16 @@ const SuperAdminComplaints = () => {
                         </td>
 
                         {/* ACTIONS */}
-                        <td style={{ padding: '1.15rem 1.25rem', textAlign: 'right', minWidth: '190px' }}>
+                        <td style={{ padding: '1.15rem 1.25rem', textAlign: 'right', minWidth: '220px' }}>
                           <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <button 
+                              onClick={() => navigate(`/superadmin-complaint-details/${c._id}`)}
+                              title="View Full Complaint Control Page"
+                              style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#2563EB', padding: '0.42rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                            >
+                              <Eye size={12} /> View
+                            </button>
+
                             <button 
                               onClick={() => handleOpenManageModal(c)}
                               title="Update Status / Reassign Handler"

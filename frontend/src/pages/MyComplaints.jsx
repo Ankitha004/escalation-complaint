@@ -168,7 +168,7 @@ const MyComplaints = () => {
               }}
             >
               <Plus size={18} />
-              <span>+ New Complaint</span>
+              <span>New Complaint</span>
             </button>
           </div>
         </div>

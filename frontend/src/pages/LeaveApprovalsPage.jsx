@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import HRSidebar from '../components/HRSidebar';
+import SuperAdminSidebar from '../components/SuperAdminSidebar';
 import API from '../services/api';
 import { 
   Menu,
@@ -67,7 +68,11 @@ const LeaveApprovalsPage = () => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC', color: '#0F172A', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <HRSidebar activeTab="leaves" badgeCount={dashboardStats.pendingRegistrations} />
+      {user?.role === 'Super Admin' ? (
+        <SuperAdminSidebar activeTab="leaves" />
+      ) : (
+        <HRSidebar activeTab="leaves" badgeCount={dashboardStats.pendingRegistrations} />
+      )}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
@@ -122,10 +127,10 @@ const LeaveApprovalsPage = () => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
               <div>
                 <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0F172A', margin: '0 0 0.5rem 0', fontFamily: "'Outfit', sans-serif" }}>
-                  Leave Approval Center
+                  Leave Approval & Quota Center
                 </h1>
                 <p style={{ color: '#475569', fontSize: '0.9rem', margin: 0 }}>
-                  Review employee leave requests and approvals status.
+                  Track leave quotas, balance allocations, and employee leave requests.
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '1rem' }}>
@@ -138,6 +143,32 @@ const LeaveApprovalsPage = () => {
                 <button onClick={fetchLeaves} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: '#2563EB', color: '#FFF', border: 'none', padding: '0.65rem 1.25rem', borderRadius: '8px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}>
                   <RefreshCw size={15} className={loadingLeaves ? 'spin-icon' : ''} /> Refresh Data
                 </button>
+              </div>
+            </div>
+
+            {/* LEAVE QUOTA ALLOCATION CARDS */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+              <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Casual Leave Quota</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0F172A', marginTop: '4px', fontFamily: "'Outfit', sans-serif" }}>12 Days / Year</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Standard Annual Allocation</div>
+              </div>
+              <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sick Leave Quota</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0F172A', marginTop: '4px', fontFamily: "'Outfit', sans-serif" }}>12 Days / Year</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Medical & Emergency Allocation</div>
+              </div>
+              <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#16A34A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Earned Leave Quota</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0F172A', marginTop: '4px', fontFamily: "'Outfit', sans-serif" }}>15 Days / Year</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Privilege Paid Leave Quota</div>
+              </div>
+              <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Leaves Pending</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#7C3AED', marginTop: '4px', fontFamily: "'Outfit', sans-serif" }}>
+                  {leavesList.filter(l => l.status?.startsWith('Pending')).length} Requests
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Awaiting Action</div>
               </div>
             </div>
 

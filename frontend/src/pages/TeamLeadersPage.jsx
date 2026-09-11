@@ -64,6 +64,8 @@ const TeamLeadersPage = () => {
     password: '',
     confirmPassword: ''
   });
+  const [formErrors, setFormErrors] = useState({});
+  const [formTouched, setFormTouched] = useState({});
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -76,7 +78,49 @@ const TeamLeadersPage = () => {
     phone: '',
     department: ''
   });
+  const [editFormErrors, setEditFormErrors] = useState({});
+  const [editFormTouched, setEditFormTouched] = useState({});
   const [editFormError, setEditFormError] = useState('');
+
+  const validateAddField = (field, value, currentFormData = formData) => {
+    let err = '';
+    if (field === 'name') {
+      if (!value || !value.trim()) err = 'Full Name is required';
+      else if (value.trim().length < 3) err = 'Full Name must be at least 3 characters long';
+    } else if (field === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!value || !value.trim()) err = 'Email Address is required';
+      else if (!emailRegex.test(value.trim())) err = 'Please enter a valid email address';
+    } else if (field === 'phone') {
+      if (value && value.trim()) {
+        if (!/^[0-9]{10}$/.test(value.trim())) err = 'Phone number must be exactly 10 digits';
+      }
+    } else if (field === 'password') {
+      if (!value) err = 'Password is required';
+      else if (value.length < 6) err = 'Password must be at least 6 characters long';
+    } else if (field === 'confirmPassword') {
+      if (!value) err = 'Confirm Password is required';
+      else if (value !== currentFormData.password) err = 'Passwords do not match';
+    }
+    return err;
+  };
+
+  const validateEditField = (field, value) => {
+    let err = '';
+    if (field === 'name') {
+      if (!value || !value.trim()) err = 'Full Name is required';
+      else if (value.trim().length < 3) err = 'Full Name must be at least 3 characters long';
+    } else if (field === 'email') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!value || !value.trim()) err = 'Email Address is required';
+      else if (!emailRegex.test(value.trim())) err = 'Please enter a valid email address';
+    } else if (field === 'phone') {
+      if (value && value.trim()) {
+        if (!/^[0-9]{10}$/.test(value.trim())) err = 'Phone number must be exactly 10 digits';
+      }
+    }
+    return err;
+  };
 
   const fetchTeamLeaders = async () => {
     setLoading(true);
@@ -128,24 +172,38 @@ const TeamLeadersPage = () => {
   const handleOpenAddModal = () => {
     setFormData({ name: '', email: '', phone: '', department: '', password: '', confirmPassword: '' });
     setFormError('');
+    setFormErrors({});
+    setFormTouched({});
     setShowAddModal(true);
   };
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
-    if (formData.name.trim().length < 3) return setFormError('Full Name must be at least 3 characters long');
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) return setFormError('Please enter a valid email address');
-    if (formData.password !== formData.confirmPassword) return setFormError('Passwords do not match');
-    if (formData.password.length < 6) return setFormError('Password must be at least 6 characters long');
+
+    const errors = {
+      name: validateAddField('name', formData.name),
+      email: validateAddField('email', formData.email),
+      phone: validateAddField('phone', formData.phone),
+      password: validateAddField('password', formData.password),
+      confirmPassword: validateAddField('confirmPassword', formData.confirmPassword, formData)
+    };
+
+    setFormErrors(errors);
+    setFormTouched({ name: true, email: true, phone: true, password: true, confirmPassword: true });
+
+    const hasErrors = Object.values(errors).some(err => err !== '');
+    if (hasErrors) {
+      setFormError('Please fix the errors highlighted below.');
+      return;
+    }
 
     setSubmitting(true);
     try {
       await API.post('/hr/team-leaders', {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
         department: formData.department || undefined,
         password: formData.password
       });
@@ -167,6 +225,8 @@ const TeamLeadersPage = () => {
       department: tl.department?._id || tl.department || ''
     });
     setEditFormError('');
+    setEditFormErrors({});
+    setEditFormTouched({});
     setShowEditModal(true);
   };
 
@@ -174,13 +234,30 @@ const TeamLeadersPage = () => {
     e.preventDefault();
     if (!selectedTL) return;
     setEditFormError('');
-    if (editFormData.name.trim().length < 3) return setEditFormError('Full Name must be at least 3 characters long');
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(editFormData.email)) return setEditFormError('Please enter a valid email address');
+
+    const errors = {
+      name: validateEditField('name', editFormData.name),
+      email: validateEditField('email', editFormData.email),
+      phone: validateEditField('phone', editFormData.phone)
+    };
+
+    setEditFormErrors(errors);
+    setEditFormTouched({ name: true, email: true, phone: true });
+
+    const hasErrors = Object.values(errors).some(err => err !== '');
+    if (hasErrors) {
+      setEditFormError('Please fix the errors highlighted below.');
+      return;
+    }
 
     setSubmitting(true);
     try {
-      await API.put(`/hr/team-leaders/${selectedTL._id}`, editFormData);
+      await API.put(`/hr/team-leaders/${selectedTL._id}`, {
+        ...editFormData,
+        name: editFormData.name.trim(),
+        email: editFormData.email.trim(),
+        phone: editFormData.phone.trim()
+      });
       setShowEditModal(false);
       setSelectedTL(null);
       fetchTeamLeaders();
@@ -483,20 +560,98 @@ const TeamLeadersPage = () => {
               </div>
             )}
 
-            <form onSubmit={handleAddSubmit} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <form onSubmit={handleAddSubmit} autoComplete="off" noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Full Name *</label>
-                <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                <input
+                  type="text"
+                  placeholder="e.g. John Doe"
+                  value={formData.name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, name: val });
+                    if (formTouched.name) {
+                      setFormErrors(prev => ({ ...prev, name: validateAddField('name', val) }));
+                    }
+                  }}
+                  onBlur={() => {
+                    setFormTouched(prev => ({ ...prev, name: true }));
+                    setFormErrors(prev => ({ ...prev, name: validateAddField('name', formData.name) }));
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: formTouched.name && formErrors.name ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                />
+                {formTouched.name && formErrors.name && (
+                  <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{formErrors.name}</span>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Email Address *</label>
-                  <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                  <input
+                    type="email"
+                    placeholder="john@example.com"
+                    value={formData.email}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData({ ...formData, email: val });
+                      if (formTouched.email) {
+                        setFormErrors(prev => ({ ...prev, email: validateAddField('email', val) }));
+                      }
+                    }}
+                    onBlur={() => {
+                      setFormTouched(prev => ({ ...prev, email: true }));
+                      setFormErrors(prev => ({ ...prev, email: validateAddField('email', formData.email) }));
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '8px',
+                      border: formTouched.email && formErrors.email ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                      fontSize: '0.85rem',
+                      outline: 'none'
+                    }}
+                  />
+                  {formTouched.email && formErrors.email && (
+                    <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{formErrors.email}</span>
+                  )}
                 </div>
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Phone Number</label>
-                  <input type="text" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                  <input
+                    type="text"
+                    placeholder="10-digit phone"
+                    value={formData.phone}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      setFormData({ ...formData, phone: val });
+                      if (formTouched.phone) {
+                        setFormErrors(prev => ({ ...prev, phone: validateAddField('phone', val) }));
+                      }
+                    }}
+                    onBlur={() => {
+                      setFormTouched(prev => ({ ...prev, phone: true }));
+                      setFormErrors(prev => ({ ...prev, phone: validateAddField('phone', formData.phone) }));
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '8px',
+                      border: formTouched.phone && formErrors.phone ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                      fontSize: '0.85rem',
+                      outline: 'none'
+                    }}
+                  />
+                  {formTouched.phone && formErrors.phone && (
+                    <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{formErrors.phone}</span>
+                  )}
                 </div>
               </div>
 
@@ -514,20 +669,76 @@ const TeamLeadersPage = () => {
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Password *</label>
                   <div style={{ position: 'relative' }}>
-                    <input type={showPassword ? 'text' : 'password'} required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} style={{ width: '100%', padding: '0.65rem 2.2rem 0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData(prev => {
+                          const updated = { ...prev, password: val };
+                          if (formTouched.confirmPassword) {
+                            setFormErrors(errs => ({ ...errs, confirmPassword: validateAddField('confirmPassword', prev.confirmPassword, updated) }));
+                          }
+                          return updated;
+                        });
+                        if (formTouched.password) {
+                          setFormErrors(prev => ({ ...prev, password: validateAddField('password', val) }));
+                        }
+                      }}
+                      onBlur={() => {
+                        setFormTouched(prev => ({ ...prev, password: true }));
+                        setFormErrors(prev => ({ ...prev, password: validateAddField('password', formData.password) }));
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 2.2rem 0.65rem 0.85rem',
+                        borderRadius: '8px',
+                        border: formTouched.password && formErrors.password ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                        fontSize: '0.85rem',
+                        outline: 'none'
+                      }}
+                    />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '0.65rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+                  {formTouched.password && formErrors.password && (
+                    <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{formErrors.password}</span>
+                  )}
                 </div>
                 <div>
                   <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Confirm Password *</label>
                   <div style={{ position: 'relative' }}>
-                    <input type={showConfirmPassword ? 'text' : 'password'} required value={formData.confirmPassword} onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })} style={{ width: '100%', padding: '0.65rem 2.2rem 0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={formData.confirmPassword}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormData({ ...formData, confirmPassword: val });
+                        if (formTouched.confirmPassword) {
+                          setFormErrors(prev => ({ ...prev, confirmPassword: validateAddField('confirmPassword', val, formData) }));
+                        }
+                      }}
+                      onBlur={() => {
+                        setFormTouched(prev => ({ ...prev, confirmPassword: true }));
+                        setFormErrors(prev => ({ ...prev, confirmPassword: validateAddField('confirmPassword', formData.confirmPassword, formData) }));
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 2.2rem 0.65rem 0.85rem',
+                        borderRadius: '8px',
+                        border: formTouched.confirmPassword && formErrors.confirmPassword ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                        fontSize: '0.85rem',
+                        outline: 'none'
+                      }}
+                    />
                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '0.65rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
                       {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+                  {formTouched.confirmPassword && formErrors.confirmPassword && (
+                    <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{formErrors.confirmPassword}</span>
+                  )}
                 </div>
               </div>
 
@@ -562,20 +773,95 @@ const TeamLeadersPage = () => {
               </div>
             )}
 
-            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <form onSubmit={handleEditSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Full Name *</label>
-                <input type="text" required value={editFormData.name} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                <input
+                  type="text"
+                  value={editFormData.name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditFormData({ ...editFormData, name: val });
+                    if (editFormTouched.name) {
+                      setEditFormErrors(prev => ({ ...prev, name: validateEditField('name', val) }));
+                    }
+                  }}
+                  onBlur={() => {
+                    setEditFormTouched(prev => ({ ...prev, name: true }));
+                    setEditFormErrors(prev => ({ ...prev, name: validateEditField('name', editFormData.name) }));
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: editFormTouched.name && editFormErrors.name ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                />
+                {editFormTouched.name && editFormErrors.name && (
+                  <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{editFormErrors.name}</span>
+                )}
               </div>
 
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Email Address *</label>
-                <input type="email" required value={editFormData.email} onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                <input
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditFormData({ ...editFormData, email: val });
+                    if (editFormTouched.email) {
+                      setEditFormErrors(prev => ({ ...prev, email: validateEditField('email', val) }));
+                    }
+                  }}
+                  onBlur={() => {
+                    setEditFormTouched(prev => ({ ...prev, email: true }));
+                    setEditFormErrors(prev => ({ ...prev, email: validateEditField('email', editFormData.email) }));
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: editFormTouched.email && editFormErrors.email ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                />
+                {editFormTouched.email && editFormErrors.email && (
+                  <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{editFormErrors.email}</span>
+                )}
               </div>
 
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '0.35rem' }}>Phone Number</label>
-                <input type="text" value={editFormData.phone} onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })} style={{ width: '100%', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.85rem', outline: 'none' }} />
+                <input
+                  type="text"
+                  value={editFormData.phone}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setEditFormData({ ...editFormData, phone: val });
+                    if (editFormTouched.phone) {
+                      setEditFormErrors(prev => ({ ...prev, phone: validateEditField('phone', val) }));
+                    }
+                  }}
+                  onBlur={() => {
+                    setEditFormTouched(prev => ({ ...prev, phone: true }));
+                    setEditFormErrors(prev => ({ ...prev, phone: validateEditField('phone', editFormData.phone) }));
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '0.65rem 0.85rem',
+                    borderRadius: '8px',
+                    border: editFormTouched.phone && editFormErrors.phone ? '1px solid #EF4444' : '1px solid #E2E8F0',
+                    fontSize: '0.85rem',
+                    outline: 'none'
+                  }}
+                />
+                {editFormTouched.phone && editFormErrors.phone && (
+                  <span style={{ color: '#EF4444', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: '500' }}>{editFormErrors.phone}</span>
+                )}
               </div>
 
               <div>

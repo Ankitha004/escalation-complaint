@@ -27,8 +27,11 @@ import {
   Download,
   Calendar,
   Check,
-  Crown
+  Crown,
+  Edit2,
+  Award
 } from 'lucide-react';
+import ResolutionCertificateModal from '../components/ResolutionCertificateModal';
 
 const MOCK_COMPLAINT_DATA = {
   _id: 'CMP0005',
@@ -63,10 +66,38 @@ const ComplaintDetails = () => {
   const [complaint, setComplaint] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showCertModal, setShowCertModal] = useState(false);
 
-  // Comment Form State
+  // Comment Form & Edit State (15 min window)
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [editingCommentIndex, setEditingCommentIndex] = useState(null);
+  const [editingText, setEditingText] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const handleSaveEditComment = async (idx) => {
+    if (!editingText.trim()) return;
+    setSavingEdit(true);
+    try {
+      await API.put(`/complaints/${id}/comments/${idx}`, {
+        message: editingText.trim()
+      });
+      setComplaint(prev => {
+        const updated = [...(prev.comments || [])];
+        if (updated[idx]) {
+          updated[idx].message = editingText.trim();
+          updated[idx].isEdited = true;
+        }
+        return { ...prev, comments: updated };
+      });
+      setEditingCommentIndex(null);
+      setEditingText('');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to edit comment. The 15-minute edit window may have expired.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   // Ratings & Cancel State
   const [rating, setRating] = useState(0);
@@ -393,24 +424,71 @@ const ComplaintDetails = () => {
                       No messages posted yet. Leave a comment below to update your Team Leader.
                     </div>
                   ) : (
-                    complaint.comments.map((comm, idx) => (
-                      <div key={idx} style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '14px', padding: '1rem 1.25rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: '800' }}>
-                              {comm.senderName}
-                            </strong>
-                            <span style={{ background: '#2563EB', color: '#FFFFFF', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800' }}>
-                              {comm.senderRole || 'Staff'}
-                            </span>
+                    complaint.comments.map((comm, idx) => {
+                      const commentTime = new Date(comm.createdAt || Date.now()).getTime();
+                      const minutesPassed = (Date.now() - commentTime) / (1000 * 60);
+                      const isMine = user && (user.name === comm.senderName || comm.senderRole === user.role);
+                      const canEdit = isMine && minutesPassed <= 15;
+                      const isEditing = editingCommentIndex === idx;
+
+                      return (
+                        <div key={idx} style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '14px', padding: '1rem 1.25rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <strong style={{ fontSize: '0.92rem', color: '#0F172A', fontWeight: '800' }}>
+                                {comm.senderName}
+                              </strong>
+                              <span style={{ background: '#2563EB', color: '#FFFFFF', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800' }}>
+                                {comm.senderRole || 'Staff'}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                              <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: '600' }}>
+                                {comm.createdAt ? new Date(comm.createdAt).toLocaleString() : 'Recent'}
+                                {comm.isEdited && <em style={{ marginLeft: '0.4rem', color: '#475569', fontWeight: '700', fontStyle: 'normal' }}>(edited)</em>}
+                              </span>
+                              {canEdit && !isEditing && (
+                                <button
+                                  onClick={() => { setEditingCommentIndex(idx); setEditingText(comm.message); }}
+                                  style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#2563EB', borderRadius: '6px', padding: '2px 8px', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                                  title="Edit comment (available for 15 min after posting)"
+                                >
+                                  <Edit2 size={11} /> Edit
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: '600' }}>
-                            {comm.createdAt ? new Date(comm.createdAt).toLocaleString() : 'Recent'}
-                          </span>
+
+                          {isEditing ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                              <input
+                                type="text"
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid #2563EB', fontSize: '0.9rem', outline: 'none', background: '#FFF' }}
+                              />
+                              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                <button
+                                  onClick={() => setEditingCommentIndex(null)}
+                                  style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', color: '#475569', padding: '0.3rem 0.7rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '600', cursor: 'pointer' }}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => handleSaveEditComment(idx)}
+                                  disabled={savingEdit || !editingText.trim()}
+                                  style={{ background: '#2563EB', border: 'none', color: '#FFF', padding: '0.3rem 0.8rem', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.2rem' }}
+                                >
+                                  <Check size={12} /> Save Edit
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p style={{ fontSize: '0.9rem', color: '#0F172A', margin: 0, lineHeight: 1.5, fontWeight: '500' }}>{comm.message}</p>
+                          )}
                         </div>
-                        <p style={{ fontSize: '0.9rem', color: '#0F172A', margin: 0, lineHeight: 1.5, fontWeight: '500' }}>{comm.message}</p>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
 
@@ -476,6 +554,10 @@ const ComplaintDetails = () => {
                         ))}
                       </div>
                       <p style={{ fontSize: '0.85rem', color: '#475569', margin: 0 }}>You rated this resolution {complaint.feedbackRating}/5.</p>
+                      <div style={{ marginTop: '0.85rem', padding: '0.65rem 0.85rem', background: '#F0FDF4', borderRadius: '8px', border: '1px solid #BBF7D0', color: '#166534', fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <CheckCircle2 size={16} color="#16A34A" />
+                        <span>This complaint has been resolved.</span>
+                      </div>
                     </div>
                   ) : (
                     <div>
@@ -494,25 +576,51 @@ const ComplaintDetails = () => {
                           />
                         ))}
                       </div>
+                      <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '1.25rem 0' }} />
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <p style={{ fontSize: '0.85rem', color: '#475569', margin: 0 }}>Not satisfied with the resolution?</p>
+                        <input 
+                          type="text" 
+                          value={reopenReason}
+                          onChange={(e) => setReopenReason(e.target.value)}
+                          placeholder="Reason for reopening..."
+                          style={{ padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem', outline: 'none' }}
+                        />
+                        <button 
+                          onClick={handleReopen}
+                          style={{ background: '#FFF', color: '#DC2626', border: '1px solid #FCA5A5', padding: '0.6rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                        >
+                          <RotateCcw size={14} /> Reopen Ticket
+                        </button>
+                      </div>
                     </div>
                   )}
 
-                  <hr style={{ border: 'none', borderTop: '1px solid #F1F5F9', margin: '1.25rem 0' }} />
-                  
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <p style={{ fontSize: '0.85rem', color: '#475569', margin: 0 }}>Not satisfied with the resolution?</p>
-                    <input 
-                      type="text" 
-                      value={reopenReason}
-                      onChange={(e) => setReopenReason(e.target.value)}
-                      placeholder="Reason for reopening..."
-                      style={{ padding: '0.6rem 0.8rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem', outline: 'none' }}
-                    />
-                    <button 
-                      onClick={handleReopen}
-                      style={{ background: '#FFF', color: '#DC2626', border: '1px solid #FCA5A5', padding: '0.6rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                  {/* Official Resolution Certificate Button */}
+                  <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid #F1F5F9' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowCertModal(true)}
+                      style={{
+                        width: '100%',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        background: 'linear-gradient(135deg, #1E3A8A 0%, #0F172A 100%)',
+                        color: '#FFFFFF',
+                        border: '1px solid #D97706',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '10px',
+                        fontSize: '0.85rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.18)',
+                        transition: 'transform 0.15s ease'
+                      }}
                     >
-                      <RotateCcw size={14} /> Reopen Ticket
+                      <Award size={18} color="#F59E0B" /> View Resolution Certificate
                     </button>
                   </div>
                 </div>
@@ -593,46 +701,46 @@ const ComplaintDetails = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {(() => {
                       const actors = new Map();
+                      const getSafeStr = (val) => {
+                        if (!val) return '';
+                        if (typeof val === 'string') return val;
+                        if (typeof val === 'object' && val.name && typeof val.name === 'string') return val.name;
+                        return '';
+                      };
                       
                       // Creator / Requester
-                      if (complaint.staffName) {
-                        actors.set(complaint.staffName, 'Raised Complaint');
-                      }
+                      const sName = getSafeStr(complaint.staffName);
+                      if (sName) actors.set(sName, 'Raised Complaint');
                       
                       // Assigned TL
-                      if (complaint.teamLeader && complaint.teamLeader !== 'Unassigned') {
-                        actors.set(complaint.teamLeader, 'Assigned Team Leader');
-                      }
+                      const tlName = getSafeStr(complaint.assignedTeamLeader) || getSafeStr(complaint.teamLeader);
+                      if (tlName && tlName !== 'Unassigned') actors.set(tlName, 'Assigned Team Leader');
                       
                       // Department Manager
-                      if (complaint.departmentManager && complaint.departmentManager !== 'Unassigned') {
-                        actors.set(complaint.departmentManager, 'Department Manager');
-                      }
+                      const mgrName = getSafeStr(complaint.departmentManager);
+                      if (mgrName && mgrName !== 'Unassigned') actors.set(mgrName, 'Department Manager');
 
                       // Commenters
                       if (complaint.comments && Array.isArray(complaint.comments)) {
                         complaint.comments.forEach(c => {
-                          if (c.senderName) {
-                            actors.set(c.senderName, `${c.senderRole} (Commented)`);
-                          }
+                          const senderStr = getSafeStr(c.senderName);
+                          if (senderStr) actors.set(senderStr, `${c.senderRole || 'User'} (Commented)`);
                         });
                       }
 
                       // Solver Reports
                       if (complaint.resolutionReports && Array.isArray(complaint.resolutionReports)) {
                         complaint.resolutionReports.forEach(r => {
-                          if (r.solverName) {
-                            actors.set(r.solverName, `${r.solverRole} (Submitted Report)`);
-                          }
+                          const solverStr = getSafeStr(r.solverName);
+                          if (solverStr) actors.set(solverStr, `${r.solverRole || 'Officer'} (Submitted Report)`);
                         });
                       }
 
                       // Timeline update actors
                       if (complaint.timeline && Array.isArray(complaint.timeline)) {
                         complaint.timeline.forEach(t => {
-                          if (t.updatedByName) {
-                            actors.set(t.updatedByName, 'Updated Complaint');
-                          }
+                          const updaterStr = getSafeStr(t.updatedByName);
+                          if (updaterStr) actors.set(updaterStr, 'Updated Complaint');
                         });
                       }
 
@@ -703,6 +811,14 @@ const ComplaintDetails = () => {
           </div>
         )}
       </main>
+
+      {/* RESOLUTION CERTIFICATE PREVIEW MODAL */}
+      {showCertModal && complaint && (
+        <ResolutionCertificateModal
+          complaint={complaint}
+          onClose={() => setShowCertModal(false)}
+        />
+      )}
     </div>
   );
 };

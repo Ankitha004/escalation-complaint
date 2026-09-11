@@ -16,24 +16,24 @@ const Dashboard = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const role = user.role || 'Employee';
+  const rawRole = (user?.role || 'Employee').trim();
+  const roleLower = rawRole.toLowerCase();
 
   // Role Based Dashboard Rendering
-  switch (role) {
-    case 'Manager':
-      return <ManagerDashboard />;
-    case 'Super Admin':
-      return <SuperAdminDashboard />;
-    case 'HR':
-      return <HRDashboard />;
-    case 'Team Leader':
-      return <TeamLeaderDashboard />;
-    case 'Staff':
-    case 'Support Staff':
-    case 'Employee':
-    default:
-      return <StaffDashboard />;
+  if (roleLower === 'manager' || roleLower.includes('manager')) {
+    return <ManagerDashboard />;
   }
+  if (roleLower === 'super admin' || roleLower === 'superadmin' || roleLower.includes('super admin')) {
+    return <SuperAdminDashboard />;
+  }
+  if (roleLower === 'hr' || roleLower.includes('hr')) {
+    return <HRDashboard />;
+  }
+  if (roleLower === 'team leader' || roleLower === 'teamleader' || roleLower.includes('team leader') || roleLower.includes('leader')) {
+    return <TeamLeaderDashboard />;
+  }
+  
+  return <StaffDashboard />;
 };
 
 export default Dashboard;

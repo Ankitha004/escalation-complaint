@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Department = require('../models/Department');
 const mongoose = require('mongoose');
+const { notifyHRAndSuperAdminOnResolution } = require('../services/notificationService');
 
 // @desc    Get dashboard statistics from live MongoDB data
 // @route   GET /api/hr/stats
@@ -353,6 +354,14 @@ const approveRegistration = async (req, res, next) => {
       userToApprove.designation = req.body.designation;
     }
 
+    if (req.body.cvUrl) {
+      userToApprove.cvUrl = req.body.cvUrl;
+    }
+
+    if (req.body.cvOriginalName) {
+      userToApprove.cvOriginalName = req.body.cvOriginalName;
+    }
+
     userToApprove.approvedBy = req.user ? req.user._id : undefined;
     userToApprove.approvedDate = new Date();
 
@@ -535,6 +544,9 @@ const updateHRComplaintStatus = async (req, res, next) => {
     });
 
     const updated = await complaint.save();
+    if (newStatus === 'Resolved') {
+      await notifyHRAndSuperAdminOnResolution(updated, req.user ? req.user.name : '');
+    }
     res.json(updated);
   } catch (error) {
     next(error);
@@ -641,6 +653,7 @@ const submitHRResolutionReport = async (req, res, next) => {
     });
 
     const updated = await complaint.save();
+    await notifyHRAndSuperAdminOnResolution(updated, req.user ? req.user.name : '');
     res.json({ message: 'Resolution report submitted successfully', complaint: updated });
   } catch (error) {
     next(error);
