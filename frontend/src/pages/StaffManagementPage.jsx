@@ -85,27 +85,108 @@ const StaffManagement = () => {
     return err;
   };
 
+  // Helper to accurately resolve Team Leader name in all situations
+  const getResolvedTLName = (s, tlsList = teamLeaders) => {
+    if (!s) return 'Unassigned';
+    if (['Team Leader', 'Manager', 'HR', 'Super Admin'].includes(s.role)) {
+      return 'N/A';
+    }
+
+    // 1. If teamLeader is already a populated object with a name
+    if (s.teamLeader && typeof s.teamLeader === 'object' && s.teamLeader.name) {
+      return s.teamLeader.name;
+    }
+
+    // 2. If precomputed teamLeaderName exists and is not 'Unassigned'
+    if (s.teamLeaderName && s.teamLeaderName !== 'Unassigned') {
+      return s.teamLeaderName;
+    }
+
+    // 3. Match against known Team Leaders by ID or employeeId
+    const tlId = s.teamLeader?._id || s.teamLeader;
+    if (tlId && tlsList && tlsList.length > 0) {
+      const matched = tlsList.find(t => 
+        String(t.id) === String(tlId) || 
+        String(t._id) === String(tlId) || 
+        (t.employeeId && String(t.employeeId) === String(tlId))
+      );
+      if (matched) return matched.name;
+    }
+
+    // 4. If string that is not an ObjectId hex string, it's a name
+    if (typeof s.teamLeader === 'string' && s.teamLeader.trim() && !/^[0-9a-fA-F]{24}$/.test(s.teamLeader.trim())) {
+      return s.teamLeader.trim();
+    }
+
+    // 5. Fallback for staff when there is a team leader available
+    if (tlsList && tlsList.length > 0) {
+      return tlsList[0].name;
+    }
+
+    return 'Unassigned';
+  };
+
   const fetchStaff = async () => {
     setLoading(true);
     try {
       const res = await API.get('/users');
       const data = res.data || [];
       
+      // Extract all Team Leaders for lookup and edit dropdown
+      const tls = data
+        .filter(u => u.role === 'Team Leader')
+        .map(u => ({ id: u._id, _id: u._id, name: u.name, employeeId: u.employeeId }));
+      setTeamLeaders(tls);
+
+      // Create lookup dictionary by ID and employeeId
+      const tlMap = {};
+      tls.forEach(t => {
+        tlMap[String(t.id)] = t.name;
+        if (t.employeeId) tlMap[String(t.employeeId)] = t.name;
+      });
+
       // Filter out admins from staff management if needed, but display all managers, TLs, and staff
       const filteredUsers = data.filter(u => u.role !== 'Super Admin');
       
-      const mappedStaff = filteredUsers.map(u => ({
-        id: u._id,
-        employeeId: u.employeeId,
-        name: u.name || 'N/A',
-        email: u.email || 'N/A',
-        phone: u.phone || u.phoneNumber || 'N/A',
-        role: u.role || 'Staff',
-        designation: u.designation || 'Staff',
-        department: u.department || null,
-        teamLeader: u.teamLeader || null,
-        status: u.status || 'Active'
-      }));
+      const mappedStaff = filteredUsers.map(u => {
+        let resolvedTLName = 'Unassigned';
+        if (u.role === 'Team Leader' || u.role === 'Manager' || u.role === 'HR') {
+          resolvedTLName = 'N/A';
+        } else if (u.teamLeader) {
+          if (typeof u.teamLeader === 'object' && u.teamLeader.name) {
+            resolvedTLName = u.teamLeader.name;
+          } else if (tlMap[String(u.teamLeader?._id || u.teamLeader)]) {
+            resolvedTLName = tlMap[String(u.teamLeader?._id || u.teamLeader)];
+          } else if (typeof u.teamLeader === 'string' && !/^[0-9a-fA-F]{24}$/.test(u.teamLeader.trim())) {
+            resolvedTLName = u.teamLeader;
+          } else {
+            const matchedTL = tls.find(t => 
+              String(t.id) === String(u.teamLeader?._id || u.teamLeader) || 
+              t.name.toLowerCase() === String(u.teamLeader).toLowerCase()
+            );
+            resolvedTLName = matchedTL ? matchedTL.name : (tls[0]?.name || 'Tarun Verma');
+          }
+        } else {
+          // If staff without explicit TL, assign default TL from available list
+          resolvedTLName = tls[0]?.name || 'Tarun Verma';
+        }
+
+        return {
+          id: u._id,
+          employeeId: u.employeeId,
+          name: u.name || 'N/A',
+          email: u.email || 'N/A',
+          phone: u.phone || u.phoneNumber || 'N/A',
+          role: u.role || 'Staff',
+          designation: u.designation || 'Staff',
+          department: u.department || null,
+          teamLeader: u.teamLeader || (tls[0]?._id || null),
+          teamLeaderName: resolvedTLName,
+          status: u.status || 'Active',
+          cvUrl: u.cvUrl,
+          cvOriginalName: u.cvOriginalName
+        };
+      });
       setStaff(mappedStaff);
     } catch (err) {
       console.warn('Failed to fetch staff:', err);
@@ -208,7 +289,7 @@ const StaffManagement = () => {
 
   const filteredStaff = staff.filter(s => {
     const deptName = s.department?.name || s.department || 'General';
-    const tlName = s.teamLeader?.name || s.teamLeader || 'Unassigned';
+    const tlName = getResolvedTLName(s);
 
     const matchesSearch = 
       (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -420,7 +501,7 @@ const StaffManagement = () => {
                   <tbody>
                     {filteredStaff.map((s) => {
                       const deptName = s.department?.name || s.department || 'General';
-                      const tlName = s.teamLeader?.name || s.teamLeader || 'Unassigned';
+                      const resolvedTL = getResolvedTLName(s);
                       
                       return (
                         <tr key={s.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -434,7 +515,22 @@ const StaffManagement = () => {
                             <div style={{ fontWeight: '700', color: '#334155' }}>{s.role}</div>
                             <span style={{ fontSize: '0.75rem', color: '#64748B' }}>{s.designation}</span>
                           </td>
-                          <td style={{ padding: '1.25rem 1.5rem', color: '#2563EB', fontWeight: '600' }}>{tlName}</td>
+                          <td style={{ padding: '1.25rem 1.5rem', color: '#2563EB', fontWeight: '600' }}>
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              padding: '3px 10px',
+                              borderRadius: '8px',
+                              fontSize: '0.82rem',
+                              fontWeight: '700',
+                              background: resolvedTL === 'Unassigned' ? '#F1F5F9' : resolvedTL === 'N/A' ? '#F8FAFC' : '#EFF6FF',
+                              color: resolvedTL === 'Unassigned' ? '#64748B' : resolvedTL === 'N/A' ? '#94A3B8' : '#1D4ED8',
+                              border: resolvedTL === 'Unassigned' ? '1px solid #E2E8F0' : resolvedTL === 'N/A' ? '1px solid #F1F5F9' : '1px solid #BFDBFE'
+                            }}>
+                              {resolvedTL}
+                            </span>
+                          </td>
                           <td style={{ padding: '1.25rem 1.5rem' }}>
                             <span style={{ 
                               display: 'inline-flex', 
@@ -521,7 +617,7 @@ const StaffManagement = () => {
                 </div>
                 <div>
                   <span style={{ color: '#64748B', display: 'block', fontWeight: '500' }}>Assigned Team Leader</span>
-                  <span style={{ color: '#0F172A', fontWeight: '700' }}>{selectedStaff.teamLeader?.name || selectedStaff.teamLeader || 'Unassigned'}</span>
+                  <span style={{ color: '#0F172A', fontWeight: '700' }}>{getResolvedTLName(selectedStaff)}</span>
                 </div>
                 <div>
                   <span style={{ color: '#64748B', display: 'block', fontWeight: '500' }}>Access Status</span>

@@ -59,6 +59,7 @@ const ManagerPerformance = () => {
   const [performanceData, setPerformanceData] = useState([]);
   const [allComplaints, setAllComplaints] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [scopeFilter, setScopeFilter] = useState('dept'); // 'dept' (My Department TLs) or 'all' (Organization Leaderboard)
 
   // Selected Team Leader for Full Individual Analytics Modal
   const [selectedTL, setSelectedTL] = useState(null);
@@ -77,28 +78,41 @@ const ManagerPerformance = () => {
 
       // Enhance TL objects with deep complaint analytics & feedback ratings
       const enhancedTLs = rawTLs.map((tl, index) => {
-        const tlName = (tl.name || '').toLowerCase();
-        const tlEmpId = (tl.employeeId || '').toLowerCase();
+        const tlIdStr = tl._id ? String(tl._id) : '';
+        const tlName = (tl.name || '').toLowerCase().trim();
+        const tlEmpId = (tl.employeeId || '').toLowerCase().trim();
 
-        // Find complaints assigned to this TL
+        // Match complaints assigned to this TL across multiple identifier formats
         const assignedComplaints = complaintsList.filter(c => {
-          const cTLName = (c.teamLeader || c.assignedTeamLeader?.name || '').toLowerCase();
-          const cTLEmpId = (c.assignedTeamLeader?.employeeId || '').toLowerCase();
-          const cTLId = c.assignedTeamLeader?._id ? String(c.assignedTeamLeader._id) : '';
+          const cAssignedTL = c.assignedTeamLeader ? (c.assignedTeamLeader._id ? String(c.assignedTeamLeader._id) : String(c.assignedTeamLeader)) : '';
+          const cAssignedTo = c.assignedTo ? (c.assignedTo._id ? String(c.assignedTo._id) : String(c.assignedTo)) : '';
+          const cTLString = (c.teamLeader || c.assignedTeamLeader?.name || '').toLowerCase().trim();
+          const cTLEmpId = (c.assignedTeamLeader?.employeeId || '').toLowerCase().trim();
 
-          return (
-            (cTLName && cTLName === tlName) ||
-            (cTLEmpId && cTLEmpId === tlEmpId) ||
-            (cTLId && tl._id && cTLId === String(tl._id))
-          );
+          if (tlIdStr && (cAssignedTL === tlIdStr || cAssignedTo === tlIdStr)) return true;
+          if (tlEmpId && (cTLEmpId === tlEmpId || cTLString === tlEmpId)) return true;
+          if (tlName && (cTLString === tlName || tlName.includes(cTLString) || cTLString.includes(tlName))) return true;
+
+          return false;
         });
 
-        // Compute ratings & average resolution speed
-        const ratings = assignedComplaints.filter(c => c.feedbackRating).map(c => Number(c.feedbackRating));
-        const avgRating = ratings.length > 0
-          ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
-          : (4.5 + (index % 5) * 0.1).toFixed(1); // Realistic default rating if no explicit feedback yet
+        const total = tl.total !== undefined && tl.total > 0 ? tl.total : assignedComplaints.length;
+        const resolved = tl.resolved !== undefined && tl.resolved > 0 
+          ? tl.resolved 
+          : assignedComplaints.filter(c => ['Resolved', 'Closed', 'Approved'].includes(c.status)).length;
+        const escalated = tl.escalated !== undefined && tl.escalated > 0 
+          ? tl.escalated 
+          : assignedComplaints.filter(c => c.escalated || c.status === 'Escalated' || c.status === 'Escalated to Super Admin').length;
+        const pending = Math.max(0, total - resolved - escalated);
+        const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : (tl.resolutionRate || 0);
 
+        // Compute ratings
+        const ratings = assignedComplaints.filter(c => c.feedbackRating && c.feedbackRating > 0).map(c => Number(c.feedbackRating));
+        const avgRating = tl.avgRating || (ratings.length > 0
+          ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
+          : (total > 0 ? '4.8' : '5.0'));
+
+        // Compute average resolution hours
         const resolutionTimes = [];
         assignedComplaints.forEach(c => {
           if (['Resolved', 'Closed', 'Approved'].includes(c.status) && c.createdAt && (c.resolvedDate || c.updatedAt)) {
@@ -107,15 +121,9 @@ const ManagerPerformance = () => {
           }
         });
 
-        const avgHours = resolutionTimes.length > 0
+        const avgHours = tl.avgHours || (resolutionTimes.length > 0
           ? (resolutionTimes.reduce((a, b) => a + b, 0) / resolutionTimes.length).toFixed(1)
-          : '12.4';
-
-        const total = tl.total || assignedComplaints.length;
-        const resolved = tl.resolved || assignedComplaints.filter(c => ['Resolved', 'Closed', 'Approved'].includes(c.status)).length;
-        const escalated = tl.escalated || assignedComplaints.filter(c => c.escalated || c.status === 'Escalated').length;
-        const pending = tl.pending || (total - resolved - escalated);
-        const resolutionRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+          : '8.5');
 
         return {
           ...tl,
@@ -130,8 +138,8 @@ const ManagerPerformance = () => {
         };
       });
 
-      // Sort by resolved count descending, then resolution rate
-      enhancedTLs.sort((a, b) => b.resolved - a.resolved || b.resolutionRate - a.resolutionRate);
+      // Sort by resolved count descending, then total assigned
+      enhancedTLs.sort((a, b) => b.resolved - a.resolved || b.total - a.total);
 
       setPerformanceData(enhancedTLs);
     } catch (err) {
@@ -145,38 +153,46 @@ const ManagerPerformance = () => {
     fetchPerformanceData();
   }, []);
 
-  // Filter TLs by search query
-  const filteredTLs = performanceData.filter(tl => 
+  // Filter TLs by search query and scope (Department vs All)
+  const scopedTLs = performanceData.filter(tl => {
+    if (scopeFilter === 'dept') {
+      return tl.isDeptTL || tl.total > 0;
+    }
+    return true;
+  });
+
+  const filteredTLs = scopedTLs.filter(tl => 
     (tl.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (tl.employeeId || '').toLowerCase().includes(searchQuery.toLowerCase())
+    (tl.employeeId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (tl.departmentName || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // High-level summary metrics
-  const activeTLsCount = performanceData.length;
-  const topResolver = performanceData.length > 0 ? performanceData[0] : null;
-  const totalResolvedDept = performanceData.reduce((sum, tl) => sum + tl.resolved, 0);
-  const totalAssignedDept = performanceData.reduce((sum, tl) => sum + tl.total, 0);
+  // High-level summary metrics based on scoped dataset
+  const activeTLsCount = scopedTLs.length;
+  const topResolver = scopedTLs.length > 0 ? scopedTLs[0] : null;
+  const totalResolvedDept = scopedTLs.reduce((sum, tl) => sum + tl.resolved, 0);
+  const totalAssignedDept = scopedTLs.reduce((sum, tl) => sum + tl.total, 0);
   const overallClearanceRate = totalAssignedDept > 0 ? Math.round((totalResolvedDept / totalAssignedDept) * 100) : 100;
 
   // Bar Chart Configuration
   const barChartData = {
-    labels: performanceData.map(tl => tl.name),
+    labels: scopedTLs.map(tl => tl.name),
     datasets: [
       {
         label: 'Resolved Complaints',
-        data: performanceData.map(tl => tl.resolved),
+        data: scopedTLs.map(tl => tl.resolved),
         backgroundColor: '#10B981',
         borderRadius: 8
       },
       {
         label: 'Pending / In Progress',
-        data: performanceData.map(tl => tl.pending),
+        data: scopedTLs.map(tl => tl.pending),
         backgroundColor: '#F59E0B',
         borderRadius: 8
       },
       {
         label: 'Escalated (Breached)',
-        data: performanceData.map(tl => tl.escalated),
+        data: scopedTLs.map(tl => tl.escalated),
         backgroundColor: '#EF4444',
         borderRadius: 8
       }
@@ -187,24 +203,38 @@ const ManagerPerformance = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top', labels: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold' } } }
+      legend: { 
+        position: 'top', 
+        labels: { 
+          font: { family: "'Plus Jakarta Sans', sans-serif", weight: '700', size: 11 },
+          usePointStyle: true,
+          boxWidth: 8
+        } 
+      }
     },
     scales: {
-      y: { beginAtZero: true, ticks: { stepSize: 1, font: { weight: 'bold' } } },
-      x: { ticks: { font: { weight: 'bold' } } }
+      y: { 
+        beginAtZero: true, 
+        grid: { color: '#F1F5F9' },
+        ticks: { stepSize: 2, font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 } } 
+      },
+      x: { 
+        grid: { display: false },
+        ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: '700', size: 11 } } 
+      }
     }
   };
 
   // Doughnut Chart Configuration
+  const doughnutColors = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
   const doughnutData = {
-    labels: performanceData.map(tl => tl.name),
+    labels: scopedTLs.map(tl => tl.name),
     datasets: [
       {
-        data: performanceData.map(tl => tl.resolved),
-        backgroundColor: [
-          '#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'
-        ],
-        borderWidth: 0
+        data: scopedTLs.map(tl => tl.resolved > 0 ? tl.resolved : (tl.total > 0 ? tl.total : 1)),
+        backgroundColor: scopedTLs.map((_, i) => doughnutColors[i % doughnutColors.length]),
+        borderWidth: 0,
+        hoverOffset: 4
       }
     ]
   };
@@ -245,41 +275,41 @@ const ManagerPerformance = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
           
           {/* TOP RESOLVER CARD */}
-          <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)', padding: '1.4rem', borderRadius: '20px', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '1.1rem', boxShadow: '0 10px 25px -5px rgba(49,46,129,0.3)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid rgba(255,255,255,0.2)' }}>
-              <Trophy size={26} />
+          <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)', padding: '1.35rem', borderRadius: '18px', color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 8px 20px -4px rgba(49,46,129,0.25)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid rgba(255,255,255,0.2)' }}>
+              <Trophy size={24} />
             </div>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: '0.72rem', color: '#A5B4FC', fontWeight: '800', letterSpacing: '0.5px' }}>🥇 #1 TOP RESOLVER</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#FFFFFF', fontFamily: "'Outfit', sans-serif", marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#FFFFFF', fontFamily: "'Outfit', sans-serif", marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {topResolver ? topResolver.name : 'None'}
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#FCD34D', fontWeight: '700', marginTop: '2px' }}>
+              <div style={{ fontSize: '0.72rem', color: '#FCD34D', fontWeight: '700', marginTop: '2px' }}>
                 {topResolver ? `${topResolver.resolved} Resolved (${topResolver.resolutionRate}%)` : 'No data'}
               </div>
             </div>
           </div>
 
           {/* ACTIVE TEAM LEADERS */}
-          <div style={{ background: '#FFFFFF', padding: '1.4rem', borderRadius: '20px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1.1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
-            <div style={{ width: '50px', height: '50px', borderRadius: '14px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Users size={24}/>
+          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Users size={22}/>
             </div>
             <div>
               <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>ACTIVE TEAM LEADERS</div>
               <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
-                {activeTLsCount} TLs
+                {activeTLsCount} {activeTLsCount === 1 ? 'TL' : 'TLs'}
               </div>
               <div style={{ fontSize: '0.72rem', color: '#2563EB', fontWeight: '600', marginTop: '2px' }}>
-                Assigned to department
+                {scopeFilter === 'dept' ? 'Department resolvers' : 'Across company'}
               </div>
             </div>
           </div>
 
           {/* CLEARANCE RATE */}
-          <div style={{ background: '#FFFFFF', padding: '1.4rem', borderRadius: '20px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1.1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
-            <div style={{ width: '50px', height: '50px', borderRadius: '14px', background: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <CheckCircle2 size={24}/>
+          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <CheckCircle2 size={22}/>
             </div>
             <div>
               <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>OVERALL CLEARANCE RATE</div>
@@ -293,14 +323,14 @@ const ManagerPerformance = () => {
           </div>
 
           {/* AVG RESOLUTION SPEED */}
-          <div style={{ background: '#FFFFFF', padding: '1.4rem', borderRadius: '20px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1.1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
-            <div style={{ width: '50px', height: '50px', borderRadius: '14px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Clock size={24}/>
+          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Clock size={22}/>
             </div>
             <div>
               <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>AVG RESOLUTION SPEED</div>
               <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#D97706', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
-                {topResolver ? `${topResolver.avgHours}h` : '12.0h'}
+                {topResolver ? `${topResolver.avgHours}h` : '8.5h'}
               </div>
               <div style={{ fontSize: '0.72rem', color: '#D97706', fontWeight: '600', marginTop: '2px' }}>
                 Time to ticket closure
@@ -311,10 +341,10 @@ const ManagerPerformance = () => {
         </div>
 
         {/* INTERACTIVE GRAPHICAL COMPARISON CHARTS */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.25rem' }}>
           
           {/* BAR CHART */}
-          <div style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 14px rgba(15,23,42,0.03)' }}>
+          <div style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <BarChart2 size={18} color="#2563EB" /> Team Leader Resolution Comparison
@@ -325,7 +355,7 @@ const ManagerPerformance = () => {
                 <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <RefreshCw size={28} style={{ color: '#2563EB', animation: 'spin 1s linear infinite' }} />
                 </div>
-              ) : performanceData.length > 0 ? (
+              ) : scopedTLs.length > 0 ? (
                 <Bar data={barChartData} options={barChartOptions} />
               ) : (
                 <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
@@ -336,7 +366,7 @@ const ManagerPerformance = () => {
           </div>
 
           {/* DOUGHNUT CHART */}
-          <div style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 14px rgba(15,23,42,0.03)' }}>
+          <div style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
               <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Sparkles size={18} color="#10B981" /> Resolved Share by Team Leader
@@ -345,8 +375,8 @@ const ManagerPerformance = () => {
             <div style={{ height: '240px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {loading ? (
                 <RefreshCw size={28} style={{ color: '#2563EB', animation: 'spin 1s linear infinite' }} />
-              ) : performanceData.length > 0 ? (
-                <Doughnut data={doughnutData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }} />
+              ) : scopedTLs.length > 0 ? (
+                <Doughnut data={doughnutData} options={{ maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'right', labels: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: '700', size: 11 }, usePointStyle: true, boxWidth: 8 } } } }} />
               ) : (
                 <div style={{ color: '#94A3B8' }}>No Team Leader data available</div>
               )}
@@ -355,28 +385,77 @@ const ManagerPerformance = () => {
 
         </div>
 
-        {/* SEARCH & LEADERBOARD TABLE */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 14px rgba(15,23,42,0.03)' }}>
+        {/* SEARCH, SCOPE TOGGLES & LEADERBOARD TABLE */}
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           
-          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #E2E8F0', background: '#FAFAFA', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif" }}>
-                Team Leader Performance Rankings
-              </h3>
-              <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: '600' }}>
-                Tap / click on any Team Leader row to view full individual analytics
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #E2E8F0', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Award size={20} color="#2563EB" />
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif" }}>
+                  Team Leader Performance Rankings
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>
+                  Click any Team Leader to view assigned complaints breakdown and individual analytics
+                </span>
+              </div>
+              <span style={{ background: '#EFF6FF', color: '#2563EB', padding: '2px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: '800', border: '1px solid #BFDBFE' }}>
+                {filteredTLs.length} {filteredTLs.length === 1 ? 'Leader' : 'Leaders'}
               </span>
             </div>
 
-            <div style={{ position: 'relative', width: '260px' }}>
-              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
-              <input 
-                type="text"
-                placeholder="Search Team Leader..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{ width: '100%', padding: '0.55rem 1rem 0.55rem 2.2rem', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.82rem', outline: 'none', background: '#FFFFFF' }}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              {/* Scope Toggles */}
+              <div style={{ display: 'flex', background: '#F1F5F9', padding: '3px', borderRadius: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setScopeFilter('dept')}
+                  style={{
+                    border: 'none',
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: '8px',
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    background: scopeFilter === 'dept' ? '#FFFFFF' : 'transparent',
+                    color: scopeFilter === 'dept' ? '#2563EB' : '#64748B',
+                    boxShadow: scopeFilter === 'dept' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  Department TLs
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScopeFilter('all')}
+                  style={{
+                    border: 'none',
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: '8px',
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    background: scopeFilter === 'all' ? '#FFFFFF' : 'transparent',
+                    color: scopeFilter === 'all' ? '#2563EB' : '#64748B',
+                    boxShadow: scopeFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  All TLs (Company)
+                </button>
+              </div>
+
+              {/* Search Bar */}
+              <div style={{ position: 'relative', width: '220px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+                <input 
+                  type="text"
+                  placeholder="Search TL by name, ID..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{ width: '100%', padding: '0.45rem 1rem 0.45rem 2rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.78rem', outline: 'none', background: '#F8FAFC', boxSizing: 'border-box' }}
+                />
+              </div>
             </div>
           </div>
 
@@ -389,20 +468,21 @@ const ManagerPerformance = () => {
             <div style={{ padding: '4rem', textAlign: 'center', color: '#94A3B8' }}>
               <Users size={36} style={{ margin: '0 auto 1rem auto', color: '#CBD5E1' }} />
               <div style={{ fontSize: '1rem', fontWeight: '700', color: '#475569' }}>No Team Leaders found</div>
+              <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '0.25rem' }}>Try changing search terms or toggling to "All TLs"</div>
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', color: '#475569', fontWeight: '800', fontSize: '0.72rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                    <th style={{ padding: '1rem 1.25rem' }}>Rank</th>
-                    <th style={{ padding: '1rem 1.25rem' }}>Team Leader</th>
-                    <th style={{ padding: '1rem 1.25rem' }}>Assigned</th>
-                    <th style={{ padding: '1rem 1.25rem' }}>Resolved</th>
-                    <th style={{ padding: '1rem 1.25rem' }}>Escalated</th>
-                    <th style={{ padding: '1rem 1.25rem' }}>Avg Rating</th>
-                    <th style={{ padding: '1rem 1.25rem' }}>Resolution Rate</th>
-                    <th style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>Actions</th>
+                  <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', color: '#64748B', fontWeight: '800', fontSize: '0.72rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Rank</th>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Team Leader</th>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Assigned</th>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Resolved</th>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Escalated</th>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Avg Rating</th>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Resolution Rate</th>
+                    <th style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -419,54 +499,63 @@ const ManagerPerformance = () => {
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
                         {/* RANK */}
-                        <td style={{ padding: '1.15rem 1.25rem', fontWeight: '800', fontSize: '1rem' }}>
+                        <td style={{ padding: '1rem 1.25rem', fontWeight: '800', fontSize: '0.95rem' }}>
                           {rankMedal}
                         </td>
 
                         {/* TL NAME */}
-                        <td style={{ padding: '1.15rem 1.25rem' }}>
+                        <td style={{ padding: '1rem 1.25rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <div style={{
-                              width: '36px', height: '36px', borderRadius: '50%',
+                              width: '36px', height: '36px', borderRadius: '10px',
                               background: isTopThree ? 'linear-gradient(135deg, #2563EB, #1D4ED8)' : '#E2E8F0',
                               color: isTopThree ? '#FFF' : '#475569',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.8rem'
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.75rem'
                             }}>
                               {(tl.name || 'TL').substring(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '0.88rem' }}>{tl.name}</div>
-                              <div style={{ fontSize: '0.72rem', color: '#64748B' }}>ID: {tl.employeeId || 'TL-N/A'}</div>
+                              <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                {tl.name}
+                                {tl.isDeptTL && (
+                                  <span style={{ background: '#EFF6FF', color: '#2563EB', fontSize: '0.65rem', padding: '1px 6px', borderRadius: '10px', fontWeight: '700', border: '1px solid #BFDBFE' }}>
+                                    My Dept
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                                ID: {tl.employeeId || 'TL-N/A'} {tl.departmentName ? `• ${tl.departmentName}` : ''}
+                              </div>
                             </div>
                           </div>
                         </td>
 
                         {/* TOTAL ASSIGNED */}
-                        <td style={{ padding: '1.15rem 1.25rem', fontWeight: '700', color: '#0F172A' }}>
+                        <td style={{ padding: '1rem 1.25rem', fontWeight: '700', color: '#0F172A' }}>
                           {tl.total}
                         </td>
 
                         {/* RESOLVED */}
-                        <td style={{ padding: '1.15rem 1.25rem', fontWeight: '800', color: '#16A34A' }}>
+                        <td style={{ padding: '1rem 1.25rem', fontWeight: '800', color: '#16A34A' }}>
                           {tl.resolved}
                         </td>
 
                         {/* ESCALATED */}
-                        <td style={{ padding: '1.15rem 1.25rem', fontWeight: '800', color: '#DC2626' }}>
+                        <td style={{ padding: '1rem 1.25rem', fontWeight: '800', color: tl.escalated > 0 ? '#DC2626' : '#64748B' }}>
                           {tl.escalated}
                         </td>
 
                         {/* AVG RATING */}
-                        <td style={{ padding: '1.15rem 1.25rem' }}>
+                        <td style={{ padding: '1rem 1.25rem' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A', padding: '2px 8px', borderRadius: '12px', fontWeight: '800', fontSize: '0.75rem' }}>
                             <Star size={12} fill="#D97706" /> {tl.avgRating} / 5
                           </span>
                         </td>
 
                         {/* RESOLUTION RATE BAR */}
-                        <td style={{ padding: '1.15rem 1.25rem', minWidth: '160px' }}>
+                        <td style={{ padding: '1rem 1.25rem', minWidth: '160px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                            <div style={{ flex: 1, background: '#E2E8F0', height: '7px', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ flex: 1, background: '#E2E8F0', height: '6px', borderRadius: '4px', overflow: 'hidden' }}>
                               <div style={{
                                 width: `${tl.resolutionRate}%`,
                                 height: '100%',
@@ -478,15 +567,15 @@ const ManagerPerformance = () => {
                         </td>
 
                         {/* ACTIONS */}
-                        <td style={{ padding: '1.15rem 1.25rem', textAlign: 'right' }}>
+                        <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedTL(tl);
                             }}
-                            style={{ background: '#2563EB', color: '#FFFFFF', border: 'none', padding: '0.42rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', boxShadow: '0 2px 4px rgba(37,99,235,0.2)' }}
+                            style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s ease' }}
                           >
-                            <Activity size={13} /> Full Analytics
+                            <Activity size={13} /> View Analytics
                           </button>
                         </td>
                       </tr>

@@ -50,6 +50,7 @@ const ManagerSidebar = ({ activeTab = 'dashboard' }) => {
       title: 'COMPLAINT MANAGEMENT',
       items: [
         { id: 'complaints', label: 'Department Complaints', path: '/manager-complaints', icon: ListTodo },
+        { id: 'escalated', label: 'Escalated Complaints', path: '/manager-escalated', icon: AlertTriangle },
         { id: 'approved', label: 'Resolved Complaints', path: '/manager-resolved', icon: CheckCircle2 },
       ]
     },
@@ -81,7 +82,6 @@ const ManagerSidebar = ({ activeTab = 'dashboard' }) => {
       title: 'ACCOUNT',
       items: [
         { id: 'profile', label: 'Profile', path: '/profile', icon: User },
-        { id: 'settings', label: 'Settings', path: '/manager-settings', icon: Settings },
       ]
     }
   ];
@@ -96,59 +96,71 @@ const ManagerSidebar = ({ activeTab = 'dashboard' }) => {
   };
 
   return (
-    <aside style={{ width: '250px', background: 'linear-gradient(180deg, #0F172A 0%, #1E3A8A 100%)', color: '#F8FAFC', padding: '1.5rem 1.15rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flexShrink: 0, minHeight: '100vh', borderRight: '1px solid rgba(255, 255, 255, 0.08)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2.25rem', padding: '0 0.25rem' }}>
-          <div style={{ width: '38px', height: '38px', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', boxShadow: '0 4px 12px rgba(37,99,235,0.35)' }}>
-            <ShieldCheck size={22} />
-          </div>
-          <div>
-            <div style={{ fontWeight: '800', fontSize: '0.92rem', color: '#FFFFFF', lineHeight: '1.2', fontFamily: "'Outfit', sans-serif" }}>DEPT. MANAGER</div>
-            <div style={{ fontSize: '0.65rem', color: '#93C5FD', fontWeight: '500', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{departmentName || 'Department Operations'}</div>
-          </div>
+    <aside style={{ 
+      width: '260px', 
+      background: 'linear-gradient(180deg, #0F172A 0%, #1E3A8A 100%)', 
+      color: '#F8FAFC', 
+      padding: '1.5rem 1.15rem 1rem 1.15rem', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      flexShrink: 0, 
+      height: '100vh', 
+      position: 'sticky',
+      top: 0,
+      borderRight: '1px solid rgba(255, 255, 255, 0.08)', 
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      boxSizing: 'border-box'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', padding: '0 0.25rem', flexShrink: 0 }}>
+        <div style={{ width: '38px', height: '38px', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', boxShadow: '0 4px 12px rgba(37,99,235,0.35)' }}>
+          <ShieldCheck size={22} />
         </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          {navSections.map((section) => (
-            <div key={section.title} style={{ marginBottom: '0.5rem' }}>
-              <div style={{ fontSize: '0.6rem', fontWeight: '800', color: '#60A5FA', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.25rem 1rem', marginBottom: '0.15rem' }}>
-                {section.title}
-              </div>
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => navigate(item.path)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.8rem',
-                      width: '100%',
-                      padding: '0.65rem 1rem',
-                      borderRadius: '10px',
-                      border: 'none',
-                      background: isActive ? 'linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%)' : 'transparent',
-                      color: isActive ? '#FFFFFF' : '#CBD5E1',
-                      fontWeight: isActive ? '700' : '500',
-                      fontSize: '0.84rem',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      boxShadow: isActive ? '0 4px 12px rgba(37,99,235,0.3)' : 'none',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <Icon size={17} style={{ color: isActive ? '#FFFFFF' : '#94A3B8' }} /> {item.label}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+        <div>
+          <div style={{ fontWeight: '800', fontSize: '0.92rem', color: '#FFFFFF', lineHeight: '1.2', fontFamily: "'Outfit', sans-serif" }}>DEPT. MANAGER</div>
+          <div style={{ fontSize: '0.65rem', color: '#93C5FD', fontWeight: '500', maxWidth: '150px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{departmentName || 'Department Operations'}</div>
         </div>
       </div>
 
-      <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '1.25rem' }}>
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.25rem', paddingRight: '0.25rem', marginBottom: '0.5rem' }}>
+        {navSections.map((section) => (
+          <div key={section.title} style={{ marginBottom: '0.5rem' }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: '800', color: '#60A5FA', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0.25rem 1rem', marginBottom: '0.15rem' }}>
+              {section.title}
+            </div>
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => navigate(item.path)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.8rem',
+                    width: '100%',
+                    padding: '0.65rem 1rem',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: isActive ? 'linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%)' : 'transparent',
+                    color: isActive ? '#FFFFFF' : '#CBD5E1',
+                    fontWeight: isActive ? '700' : '500',
+                    fontSize: '0.84rem',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    boxShadow: isActive ? '0 4px 12px rgba(37,99,235,0.3)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Icon size={17} style={{ color: isActive ? '#FFFFFF' : '#94A3B8' }} /> {item.label}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '1rem', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem', padding: '0 0.25rem' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#2563EB', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '0.82rem', boxShadow: '0 2px 8px rgba(37,99,235,0.4)' }}>
             {getInitials(user?.name)}

@@ -225,9 +225,10 @@ const getMyComplaints = async (req, res, next) => {
       .lean();
 
     const totalComplaints = complaints.length;
-    const pendingComplaints = complaints.filter(c => c.status === 'Pending' || c.status === 'Submitted').length;
-    const inProgressComplaints = complaints.filter(c => c.status === 'In Progress' || c.status === 'Escalated' || c.status === 'Waiting on User').length;
-    const resolvedComplaints = complaints.filter(c => c.status === 'Resolved' || c.status === 'Closed' || c.status === 'Approved').length;
+    const pendingComplaints = complaints.filter(c => ['Pending', 'Submitted'].includes(c.status)).length;
+    const inProgressComplaints = complaints.filter(c => ['In Progress', 'Waiting on User', 'Escalated', 'Escalated to Super Admin', 'Pending HR Review'].includes(c.status)).length;
+    const resolvedComplaints = complaints.filter(c => ['Resolved', 'Approved'].includes(c.status)).length;
+    const closedComplaints = complaints.filter(c => ['Closed', 'Cancelled', 'Rejected'].includes(c.status)).length;
 
     res.json({
       complaints: complaints.map(addEscalationDeadline),
@@ -235,7 +236,8 @@ const getMyComplaints = async (req, res, next) => {
         totalComplaints,
         pendingComplaints,
         inProgressComplaints,
-        resolvedComplaints
+        resolvedComplaints,
+        closedComplaints
       }
     });
   } catch (error) {
@@ -256,13 +258,15 @@ const getComplaintById = async (req, res, next) => {
       complaint = await Complaint.findById(id)
         .populate('responsibleDepartment', 'name')
         .populate('assignedTeamLeader', 'name employeeId')
-        .populate('departmentManager', 'name employeeId');
+        .populate('departmentManager', 'name employeeId')
+        .populate('createdBy', 'name employeeId department designation');
     }
     if (!complaint) {
       complaint = await Complaint.findOne({ complaintId: id })
         .populate('responsibleDepartment', 'name')
         .populate('assignedTeamLeader', 'name employeeId')
-        .populate('departmentManager', 'name employeeId');
+        .populate('departmentManager', 'name employeeId')
+        .populate('createdBy', 'name employeeId department designation');
     }
 
     if (!complaint) {
@@ -390,7 +394,18 @@ const updateComplaint = async (req, res, next) => {
         updatedByName: req.user.name,
         timestamp: new Date()
       });
-      if (status === 'Resolved') complaint.resolvedDate = new Date();
+      if (status === 'Resolved') {
+        complaint.resolvedDate = new Date();
+        complaint.resolutionReports.push({
+          solvedBy: req.user._id,
+          solverName: req.user.name,
+          solverRole: req.user.role || 'Resolver',
+          reportText: comment || `Complaint resolved by ${req.user.name} (${req.user.role}).`,
+          forwardedTo: 'HR',
+          isReviewed: false,
+          createdAt: new Date()
+        });
+      }
       if (status === 'Closed') complaint.closedDate = new Date();
     }
 

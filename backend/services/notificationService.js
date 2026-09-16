@@ -28,7 +28,20 @@ const notifyHRAndSuperAdminOnResolution = async (complaint, resolverName = '') =
     const complaintRef = complaint.complaintId || complaint._id || 'Complaint';
     const subjectText = complaint.subject || complaint.title || '';
     const resolverText = resolverName ? ` by ${resolverName}` : '';
-    const msg = `Complaint #${complaintRef} ("${subjectText}") has been resolved${resolverText}.`;
+    
+    // Check if there is a latest resolution report text
+    let reportDetail = '';
+    if (complaint.resolutionReports && complaint.resolutionReports.length > 0) {
+      const latestReport = complaint.resolutionReports[complaint.resolutionReports.length - 1];
+      if (latestReport && latestReport.reportText) {
+        const snippet = latestReport.reportText.length > 80 
+          ? latestReport.reportText.substring(0, 77) + '...' 
+          : latestReport.reportText;
+        reportDetail = ` Details: "${snippet}"`;
+      }
+    }
+
+    const msg = `Complaint #${complaintRef} ("${subjectText}") has been resolved${resolverText}.${reportDetail}`;
 
     for (const adminUser of hrAndAdminUsers) {
       await createNotification(adminUser._id, msg, complaint._id);

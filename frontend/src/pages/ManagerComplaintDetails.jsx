@@ -43,6 +43,11 @@ const ManagerComplaintDetails = () => {
   const [actionNote, setActionNote] = useState('');
   const [submittingAction, setSubmittingAction] = useState(false);
 
+  // Escalate to Super Admin State
+  const [showSuperAdminModal, setShowSuperAdminModal] = useState(false);
+  const [superAdminReason, setSuperAdminReason] = useState('');
+  const [submittingSuperAdmin, setSubmittingSuperAdmin] = useState(false);
+
   // Comment State
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
@@ -145,6 +150,29 @@ const ManagerComplaintDetails = () => {
       alert(err.response?.data?.message || 'Failed to close complaint.');
     } finally {
       setSubmittingAction(false);
+    }
+  };
+
+  // Escalate to Super Admin
+  const handleEscalateSuperAdmin = async (e) => {
+    if (e) e.preventDefault();
+    if (!superAdminReason.trim()) {
+      alert('Please provide a reason for escalating this complaint to the Super Admin.');
+      return;
+    }
+    setSubmittingSuperAdmin(true);
+    try {
+      const res = await API.put(`/manager/complaints/${id}/escalate-superadmin`, {
+        reason: superAdminReason.trim()
+      });
+      alert(res.data?.message || 'Complaint successfully escalated to Super Admin!');
+      setShowSuperAdminModal(false);
+      setSuperAdminReason('');
+      fetchComplaintAndTLs();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to escalate complaint to Super Admin.');
+    } finally {
+      setSubmittingSuperAdmin(false);
     }
   };
 
@@ -286,30 +314,106 @@ const ManagerComplaintDetails = () => {
                     </div>
                   ) : complaint.status === 'Escalated' ? (
                     <div>
-                      <p style={{ fontSize: '0.85rem', color: '#7F1D1D', marginBottom: '1rem' }}>
-                        This complaint was escalated from the Team Leader. You can resolve it and submit a report to HR.
+                      <div style={{ background: '#FFF1F2', border: '1px solid #FECDD3', borderRadius: '10px', padding: '0.85rem 1rem', marginBottom: '1.25rem' }}>
+                        <div style={{ fontWeight: '700', color: '#991B1B', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.25rem' }}>
+                          <AlertTriangle size={15} color="#DC2626" /> Escalated by Team Leader
+                        </div>
+                        <p style={{ fontSize: '0.82rem', color: '#7F1D1D', margin: 0, lineHeight: 1.4 }}>
+                          This complaint was escalated to you by the Team Leader. You can resolve the issue and submit a resolution report to HR, or escalate it directly to the Super Admin if it cannot be resolved at the department level.
+                        </p>
+                      </div>
+
+                      {/* RESOLVE OPTION */}
+                      <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '1.15rem', marginBottom: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                        <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem' }}>
+                          <CheckCircle2 size={16} color="#16A34A" /> Option 1: Resolve & Submit Report to HR
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '0 0 0.75rem 0' }}>
+                          If you have resolved or reached a conclusion on this complaint, draft your resolution details below:
+                        </p>
+                        <textarea
+                          rows="3"
+                          placeholder="Enter resolution report details..."
+                          value={actionNote}
+                          onChange={(e) => setActionNote(e.target.value)}
+                          style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem', outline: 'none', resize: 'vertical', background: '#F8FAFC', marginBottom: '0.75rem', boxSizing: 'border-box' }}
+                        />
+                        <button 
+                          onClick={async () => {
+                            if (!actionNote.trim()) return alert('Please enter a resolution report.');
+                            setSubmittingAction(true);
+                            try {
+                              const res = await API.post(`/manager/complaints/${id}/resolve-report`, { reportText: actionNote });
+                              setComplaint(res.data.complaint);
+                              setActionNote('');
+                              alert('Resolution report submitted to HR successfully.');
+                              fetchComplaintAndTLs();
+                            } catch (err) { alert(err.response?.data?.message || 'Failed to submit report.'); }
+                            setSubmittingAction(false);
+                          }} 
+                          disabled={submittingAction || !actionNote.trim()} 
+                          style={{ 
+                            width: '100%', 
+                            padding: '0.75rem', 
+                            background: '#16A34A', 
+                            color: '#FFF', 
+                            border: 'none', 
+                            borderRadius: '8px', 
+                            fontWeight: '800', 
+                            fontSize: '0.85rem',
+                            cursor: 'pointer', 
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.5rem',
+                            opacity: (!actionNote.trim() || submittingAction) ? 0.65 : 1,
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <CheckCircle2 size={16} /> Submit Resolution Report to HR
+                        </button>
+                      </div>
+
+                      {/* ESCALATE TO SUPER ADMIN OPTION */}
+                      <div style={{ background: '#FFF7ED', border: '1px solid #FFEDD5', borderRadius: '12px', padding: '1.15rem', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                        <div style={{ fontWeight: '800', fontSize: '0.88rem', color: '#9A3412', display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem' }}>
+                          <AlertTriangle size={16} color="#EA580C" /> Option 2: Escalate to Super Admin
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: '#7C2D12', margin: '0 0 0.75rem 0' }}>
+                          If this complaint requires executive intervention, systemic privileges, or cannot be resolved at the department level:
+                        </p>
+                        <button 
+                          onClick={() => setShowSuperAdminModal(true)}
+                          disabled={submittingAction}
+                          style={{ 
+                            width: '100%', 
+                            padding: '0.75rem', 
+                            background: '#DC2626', 
+                            color: '#FFF', 
+                            border: 'none', 
+                            borderRadius: '8px', 
+                            fontWeight: '800', 
+                            fontSize: '0.85rem',
+                            cursor: 'pointer', 
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.5rem',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <AlertTriangle size={16} /> Escalate to Super Admin
+                        </button>
+                      </div>
+                    </div>
+                  ) : complaint.status === 'Escalated to Super Admin' ? (
+                    <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px', padding: '1rem', color: '#991B1B' }}>
+                      <div style={{ fontWeight: '800', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                        <AlertTriangle size={16} color="#DC2626" /> Escalated to Super Admin
+                      </div>
+                      <p style={{ fontSize: '0.82rem', margin: 0, lineHeight: 1.4 }}>
+                        This complaint has been escalated to the Super Admin for top-level review and action.
                       </p>
-                      <textarea
-                        rows="3"
-                        placeholder="Enter resolution report details..."
-                        value={actionNote}
-                        onChange={(e) => setActionNote(e.target.value)}
-                        style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid #FECACA', fontSize: '0.85rem', outline: 'none', resize: 'vertical', background: '#FFF', marginBottom: '0.75rem', boxSizing: 'border-box' }}
-                      />
-                      <button onClick={async () => {
-                        if (!actionNote) return alert('Please enter a resolution report.');
-                        setSubmittingAction(true);
-                        try {
-                          const res = await API.post(`/manager/complaints/${id}/resolve-report`, { reportText: actionNote });
-                          setComplaint(res.data.complaint);
-                          setActionNote('');
-                          alert('Report submitted to HR.');
-                          fetchComplaintAndTLs();
-                        } catch (err) { alert('Failed to submit report.'); }
-                        setSubmittingAction(false);
-                      }} disabled={submittingAction || !actionNote} style={{ width: '100%', padding: '0.75rem', background: '#BE123C', color: '#FFF', border: 'none', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', opacity: (!actionNote || submittingAction) ? 0.7 : 1 }}>
-                        Submit Report to HR
-                      </button>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -323,10 +427,6 @@ const ManagerComplaintDetails = () => {
                                 Set In Progress
                               </button>
                             )}
-                            <button onClick={() => handleStatusUpdate('Resolved')} disabled={submittingAction}
-                              style={{ background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}>
-                              <CheckCircle2 size={14} style={{ marginRight: '0.25rem', verticalAlign: 'middle' }} /> Resolve
-                            </button>
                           </>
                         )}
                         {complaint.status === 'Resolved' && (
@@ -597,6 +697,141 @@ const ManagerComplaintDetails = () => {
         )}
         </main>
       </div>
+
+      {/* ESCALATE TO SUPER ADMIN MODAL */}
+      {showSuperAdminModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1.5rem'
+        }}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '520px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            overflow: 'hidden',
+            border: '1px solid #FECDD3'
+          }}>
+            <div style={{
+              background: '#FFF1F2',
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid #FECDD3',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEE2E2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#DC2626' }}>
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', color: '#991B1B', fontFamily: "'Outfit', sans-serif" }}>
+                    Escalate to Super Admin
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#B91C1C' }}>
+                    Complaint Ref: {complaint?.complaintId}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setShowSuperAdminModal(false); setSuperAdminReason(''); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#991B1B', padding: '4px' }}
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEscalateSuperAdmin} style={{ padding: '1.5rem' }}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#0F172A', marginBottom: '0.5rem' }}>
+                  Reason for Escalation to Super Admin <span style={{ color: '#DC2626' }}>*</span>
+                </label>
+                <textarea
+                  required
+                  rows="4"
+                  placeholder="Explain why this complaint cannot be resolved at the Manager level and what intervention is requested from the Super Admin..."
+                  value={superAdminReason}
+                  onChange={(e) => setSuperAdminReason(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.85rem',
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                    background: '#F8FAFC'
+                  }}
+                />
+                <span style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.35rem', display: 'block' }}>
+                  This will notify the Super Admin immediately and record an escalation log on the complaint timeline.
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowSuperAdminModal(false); setSuperAdminReason(''); }}
+                  disabled={submittingSuperAdmin}
+                  style={{
+                    padding: '0.65rem 1.25rem',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    color: '#475569',
+                    fontSize: '0.85rem',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingSuperAdmin || !superAdminReason.trim()}
+                  style={{
+                    padding: '0.65rem 1.25rem',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: '#DC2626',
+                    color: '#FFFFFF',
+                    fontSize: '0.85rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    opacity: (!superAdminReason.trim() || submittingSuperAdmin) ? 0.65 : 1
+                  }}
+                >
+                  {submittingSuperAdmin ? (
+                    <>
+                      <RefreshCw size={14} className="spin-icon" /> Escalating...
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle size={14} /> Confirm Escalation
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

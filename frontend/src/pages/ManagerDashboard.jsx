@@ -158,6 +158,12 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
   const safeComplaints = Array.isArray(complaints) ? complaints : [];
 
   const filteredComplaints = safeComplaints.filter((c) => {
+    // If current tab is 'escalated', strictly only show escalated complaints
+    if (activeTab === 'escalated') {
+      const isEscalated = c.status === 'Escalated' || c.status === 'Escalated to Super Admin' || c.escalated === true;
+      if (!isEscalated) return false;
+    }
+
     const matchesSearch = 
       (c.complaintId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.staffId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -165,7 +171,13 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
       (c.subject || c.title || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesPriority = priorityFilter === 'All Priority' || c.priority === priorityFilter;
-    const matchesStatus = statusFilter === 'All Status' || c.status === statusFilter;
+    
+    let matchesStatus = true;
+    if (statusFilter === 'Escalated') {
+      matchesStatus = c.status === 'Escalated' || c.status === 'Escalated to Super Admin' || c.escalated === true;
+    } else if (statusFilter !== 'All Status') {
+      matchesStatus = c.status === statusFilter;
+    }
 
     return matchesSearch && matchesPriority && matchesStatus;
   });
@@ -263,11 +275,11 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
   };
 
   const isOverview = activeTab === 'overview' || activeTab === 'dashboard';
-  const isComplaints = activeTab === 'complaints';
+  const isComplaints = activeTab === 'complaints' || activeTab === 'escalated';
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F4F7FE', color: '#0F172A', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <ManagerSidebar activeTab={activeTab === 'leaves' ? 'leaves' : activeTab === 'complaints' ? 'complaints' : 'dashboard'} />
+      <ManagerSidebar activeTab={activeTab === 'leaves' ? 'leaves' : activeTab === 'escalated' ? 'escalated' : activeTab === 'complaints' ? 'complaints' : 'dashboard'} />
 
       <main style={{ flex: 1, padding: '2rem', overflowY: 'auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
@@ -276,7 +288,11 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: 0 }}>
-                {activeTab === 'leaves' ? 'Leave Approval Center' : `${departmentName || 'Department'} Executive Control Center`}
+                {activeTab === 'leaves' 
+                  ? 'Leave Approval Center' 
+                  : activeTab === 'escalated'
+                  ? `${departmentName || 'Department'} Escalated Complaints`
+                  : `${departmentName || 'Department'} Executive Control Center`}
               </h1>
               <span style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', fontSize: '0.75rem', fontWeight: '700', padding: '0.25rem 0.75rem', borderRadius: '20px' }}>
                 Department Manager View
@@ -434,7 +450,26 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
               </div>
 
               {/* ESCALATED TICKETS */}
-              <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+              <div 
+                onClick={() => {
+                  setStatusFilter(statusFilter === 'Escalated' ? 'All Status' : 'Escalated');
+                  const tbl = document.getElementById('manager-complaints-table');
+                  if (tbl) tbl.scrollIntoView({ behavior: 'smooth' });
+                }}
+                style={{ 
+                  background: statusFilter === 'Escalated' ? '#FEF2F2' : '#FFFFFF', 
+                  padding: '1.35rem', 
+                  borderRadius: '18px', 
+                  border: statusFilter === 'Escalated' ? '2px solid #EF4444' : '1px solid #E2E8F0', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '1rem', 
+                  boxShadow: '0 2px 6px rgba(15,23,42,0.02)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                title="Click to filter escalated complaints"
+              >
                 <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <ShieldAlert size={22}/>
                 </div>
@@ -444,7 +479,7 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
                     {stats.escalatedToManager}
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#DC2626', fontWeight: '600', marginTop: '2px' }}>
-                    {stats.slaAtRisk} SLA at risk
+                    {statusFilter === 'Escalated' ? 'Filtering active (click to reset)' : `${stats.slaAtRisk} SLA at risk (click to view)`}
                   </div>
                 </div>
               </div>
@@ -645,13 +680,29 @@ const ManagerDashboard = ({ initialTab = 'overview' }) => {
             )}
 
             {/* MAIN COMPLAINTS TABLE */}
-            <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+            <div id="manager-complaints-table" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
               
               <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <ListTodo size={20} color="#0F172A" />
-                  <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>Department Complaints</h2>
-                  <span style={{ background: '#EFF6FF', color: '#2563EB', padding: '2px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: '800', border: '1px solid #BFDBFE' }}>{filteredComplaints.length} Records</span>
+                  {activeTab === 'escalated' ? (
+                    <AlertTriangle size={20} color="#DC2626" />
+                  ) : (
+                    <ListTodo size={20} color="#0F172A" />
+                  )}
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: activeTab === 'escalated' ? '#B91C1C' : '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                    {activeTab === 'escalated' ? 'Escalated Complaints' : 'Department Complaints'}
+                  </h2>
+                  <span style={{ 
+                    background: activeTab === 'escalated' ? '#FEF2F2' : '#EFF6FF', 
+                    color: activeTab === 'escalated' ? '#DC2626' : '#2563EB', 
+                    padding: '2px 8px', 
+                    borderRadius: '12px', 
+                    fontSize: '0.65rem', 
+                    fontWeight: '800', 
+                    border: activeTab === 'escalated' ? '1px solid #FECACA' : '1px solid #BFDBFE' 
+                  }}>
+                    {filteredComplaints.length} {activeTab === 'escalated' ? 'Escalated' : 'Records'}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <div style={{ position: 'relative' }}>

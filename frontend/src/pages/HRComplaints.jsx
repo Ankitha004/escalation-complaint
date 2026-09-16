@@ -35,8 +35,10 @@ import {
   ExternalLink,
   ChevronRight,
   TrendingUp,
-  Inbox
+  Inbox,
+  Download
 } from 'lucide-react';
+import ResolutionCertificateModal from '../components/ResolutionCertificateModal';
 
 const PRIORITY_COLORS = {
   'Critical': { bg: '#FEF2F2', color: '#DC2626', border: '#FCA5A5' },
@@ -80,6 +82,7 @@ const HRComplaints = () => {
   const [manageModalComplaint, setManageModalComplaint] = useState(null);
   const [timelineModalComplaint, setTimelineModalComplaint] = useState(null);
   const [resolutionModalComplaint, setResolutionModalComplaint] = useState(null);
+  const [certModalComplaint, setCertModalComplaint] = useState(null);
 
   // Manage Form State
   const [selectedStatus, setSelectedStatus] = useState('');
@@ -881,7 +884,17 @@ const HRComplaints = () => {
                 )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', marginTop: '0.5rem' }}>
+                <button 
+                  onClick={() => {
+                    const comp = resolutionModalComplaint;
+                    setResolutionModalComplaint(null);
+                    setCertModalComplaint(comp);
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.65rem 1.25rem', background: '#16A34A', border: 'none', borderRadius: '10px', color: '#FFFFFF', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 2px 6px rgba(22,163,74,0.3)' }}
+                >
+                  <Download size={14} /> Download PDF Report
+                </button>
                 <button onClick={() => setResolutionModalComplaint(null)} style={{ padding: '0.65rem 1.25rem', background: '#F1F5F9', border: 'none', borderRadius: '10px', color: '#475569', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}>
                   Close Report
                 </button>
@@ -889,6 +902,14 @@ const HRComplaints = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* RESOLUTION CERTIFICATE / PDF REPORT MODAL */}
+      {certModalComplaint && (
+        <ResolutionCertificateModal 
+          complaint={certModalComplaint}
+          onClose={() => setCertModalComplaint(null)}
+        />
       )}
     </div>
   );

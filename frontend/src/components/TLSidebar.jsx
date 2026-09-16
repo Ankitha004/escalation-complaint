@@ -80,8 +80,11 @@ const TLSidebar = ({ activeTab = 'dashboard' }) => {
       display: 'flex', 
       flexDirection: 'column', 
       flexShrink: 0, 
-      minHeight: '100vh',
-      fontFamily: "'Plus Jakarta Sans', sans-serif"
+      height: '100vh',
+      position: 'sticky',
+      top: 0,
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      boxSizing: 'border-box'
     }}>
       {/* BRAND HEADER */}
       <div style={{ padding: '2rem 1.5rem 1.25rem 1.5rem' }}>
@@ -177,7 +180,7 @@ const TLSidebar = ({ activeTab = 'dashboard' }) => {
       </div>
 
       {/* USER PROFILE & LOGOUT FOOTER */}
-      <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', background: 'rgba(0,0,0,0.15)' }}>
+      <div style={{ padding: '1.25rem 1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', background: 'rgba(0,0,0,0.15)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div style={{ 

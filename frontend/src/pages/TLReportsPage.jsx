@@ -208,75 +208,55 @@ const TLReportsPage = () => {
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC', color: '#0F172A', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <TLSidebar activeTab="tl-reports" />
 
-      <main style={{ flex: 1, padding: '2.25rem 2.75rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <main style={{ flex: 1, padding: '2rem', overflowY: 'auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
-        {/* WHITE THEME HERO HEADER CARD */}
-        <div style={{ 
-          background: '#FFFFFF', 
-          borderRadius: '24px', 
-          padding: '2rem 2.25rem', 
-          boxShadow: '0 4px 20px rgba(15,23,42,0.04)',
-          border: '1px solid #E2E8F0',
-          display: 'flex',
-          justify: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1.5rem',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {/* Top Decorative Blue Accent Bar */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, #2563EB 0%, #4F46E5 100%)' }} />
-
+        {/* HEADER BAR */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-              <span style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', fontSize: '0.75rem', fontWeight: '800', padding: '4px 12px', borderRadius: '20px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                <BarChart2 size={14} color="#2563EB" /> OFFICIAL TEAM REPORT
-              </span>
-              <span style={{ background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', fontSize: '0.72rem', fontWeight: '800', padding: '3px 9px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#059669' }} /> LIVE ANALYTICS
-              </span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: '#EFF6FF', color: '#2563EB', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800', marginBottom: '0.5rem' }}>
+              <BarChart2 size={14} /> Team Performance & Reports
             </div>
-
-            <h1 style={{ fontSize: '2rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: 0, letterSpacing: '-0.02em', lineHeight: '1.2' }}>
-              Team Performance & Complaint Reports
+            <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: '0 0 0.25rem 0' }}>
+              Team Analytics & Audit Reports
             </h1>
-            <p style={{ fontSize: '0.9rem', color: '#64748B', marginTop: '0.4rem', margin: 0, maxWidth: '640px', lineHeight: '1.5' }}>
-              Real-time summary, SLA compliance, resolution velocity, member activity breakdown, and exportable CSV audit logs.
+            <p style={{ color: '#64748B', fontSize: '0.9rem', margin: 0 }}>
+              Operational metrics, resolution velocity, SLA compliance, and exportable audit logs for <strong style={{ color: '#0F172A' }}>{user?.name || 'Supervisor'}</strong>
             </p>
           </div>
 
-          {/* ACTION BUTTONS & REFRESH */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#64748B', fontSize: '0.85rem', fontWeight: '600' }}>
+              <Calendar size={16} /> {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+            </div>
             <button 
               onClick={exportToCSV} 
-              style={{ background: '#2563EB', color: '#FFFFFF', border: 'none', padding: '0.75rem 1.35rem', borderRadius: '14px', fontSize: '0.88rem', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: '#2563EB', color: '#FFFFFF', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 1px 2px rgba(37,99,235,0.2)', transition: 'all 0.2s ease' }}
             >
-              <Download size={17} /> Export CSV Report
+              <Download size={15} /> Export CSV
             </button>
             <button 
               onClick={() => window.print()} 
-              style={{ background: '#FFFFFF', color: '#475569', border: '1px solid #E2E8F0', padding: '0.75rem 1.1rem', borderRadius: '14px', fontSize: '0.88rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.45rem', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: '#FFFFFF', color: '#475569', border: '1px solid #E2E8F0', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
             >
-              <Printer size={17} /> Print / PDF
+              <Printer size={15} /> Print
             </button>
             <button 
               onClick={fetchReportData} 
               title="Refresh Analytics" 
-              style={{ background: '#FFFFFF', color: '#64748B', border: '1px solid #E2E8F0', padding: '0.75rem', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', background: '#FFFFFF', color: '#475569', border: '1px solid #E2E8F0', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
             >
-              <RefreshCw size={17} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+              <RefreshCw size={14} className={loading ? 'spin-icon' : ''} /> Refresh
             </button>
           </div>
         </div>
 
         {/* TIME RANGE SELECTOR BAR */}
-        <div style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '0.85rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', boxShadow: '0 4px 14px rgba(15,23,42,0.03)' }}>
-          <div style={{ fontSize: '0.85rem', fontWeight: '800', color: '#475569', display: 'flex', alignItems: 'center', gap: '0.55rem', letterSpacing: '0.04em' }}>
-            <Calendar size={17} color="#2563EB" /> REPORTING TIME WINDOW:
+        <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '0.75rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Calendar size={15} color="#2563EB" /> Reporting Window:
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', background: '#F8FAFC', padding: '4px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+          <div style={{ display: 'flex', gap: '0.35rem', background: '#F8FAFC', padding: '3px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
             {[
               { id: 'all', label: 'All Time' },
               { id: '30days', label: 'Last 30 Days' },
@@ -287,14 +267,15 @@ const TLReportsPage = () => {
                 key={r.id}
                 onClick={() => setTimeRange(r.id)}
                 style={{
-                  background: timeRange === r.id ? '#EFF6FF' : 'transparent',
+                  background: timeRange === r.id ? '#FFFFFF' : 'transparent',
                   color: timeRange === r.id ? '#2563EB' : '#64748B',
-                  border: timeRange === r.id ? '1px solid #BFDBFE' : '1px solid transparent',
-                  padding: '0.45rem 1rem',
-                  borderRadius: '10px',
-                  fontSize: '0.82rem',
+                  border: timeRange === r.id ? '1px solid #E2E8F0' : '1px solid transparent',
+                  padding: '0.35rem 0.85rem',
+                  borderRadius: '6px',
+                  fontSize: '0.78rem',
                   fontWeight: timeRange === r.id ? '800' : '600',
                   cursor: 'pointer',
+                  boxShadow: timeRange === r.id ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
                   transition: 'all 0.2s ease'
                 }}
               >
@@ -304,75 +285,71 @@ const TLReportsPage = () => {
           </div>
         </div>
 
-        {/* 4 KPI METRIC CARDS */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '1.35rem' }}>
+        {/* 4 TOP KPI METRIC CARDS */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
           
           {/* TOTAL COMPLAINTS */}
-          <div style={{ background: '#FFFFFF', padding: '1.6rem 1.75rem', borderRadius: '22px', border: '1px solid #E2E8F0', boxShadow: '0 4px 14px rgba(15,23,42,0.03)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#2563EB' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total Complaints</span>
-              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <FileText size={20} />
+          <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: '700' }}>Total Complaints</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FileText size={16} />
               </div>
             </div>
-            <div style={{ fontSize: '2.2rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", marginTop: '0.6rem' }}>
+            <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>
               {totalCount}
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ color: '#059669', fontWeight: '700' }}>✓ {resolvedCount} Resolved</span>
+            <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <span style={{ color: '#16A34A', fontWeight: '700' }}>✓ {resolvedCount} Resolved</span>
               <span>&bull;</span>
               <span style={{ color: '#D97706', fontWeight: '700' }}>{inProgressCount + pendingCount} Active</span>
             </div>
           </div>
 
-          {/* SLA ADHERENCE */}
-          <div style={{ background: '#FFFFFF', padding: '1.6rem 1.75rem', borderRadius: '22px', border: '1px solid #E2E8F0', boxShadow: '0 4px 14px rgba(15,23,42,0.03)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#10B981' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>SLA Compliance</span>
-              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <ShieldCheck size={20} />
+          {/* SLA COMPLIANCE */}
+          <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: '700' }}>SLA Compliance</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F0FDF4', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShieldCheck size={16} />
               </div>
             </div>
-            <div style={{ fontSize: '2.2rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", marginTop: '0.6rem' }}>
+            <div style={{ fontSize: '1.75rem', fontWeight: '800', color: slaAdherenceRate >= 80 ? '#16A34A' : '#D97706', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>
               {slaAdherenceRate}%
             </div>
-            <div style={{ fontSize: '0.78rem', color: breachedCount > 0 ? '#DC2626' : '#059669', marginTop: '0.4rem', fontWeight: '700' }}>
-              {breachedCount === 0 ? '✓ 100% On-time resolution' : `⚠️ ${breachedCount} SLA Breaches recorded`}
+            <div style={{ fontSize: '0.75rem', color: breachedCount > 0 ? '#DC2626' : '#16A34A', marginTop: '0.5rem', fontWeight: '700' }}>
+              {breachedCount === 0 ? '✓ 100% On-time resolution' : `⚠️ ${breachedCount} SLA Breaches`}
             </div>
           </div>
 
           {/* AVG RESOLUTION DURATION */}
-          <div style={{ background: '#FFFFFF', padding: '1.6rem 1.75rem', borderRadius: '22px', border: '1px solid #E2E8F0', boxShadow: '0 4px 14px rgba(15,23,42,0.03)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#F59E0B' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Avg Resolution Speed</span>
-              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Zap size={20} />
+          <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: '700' }}>Avg Resolution Speed</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Zap size={16} />
               </div>
             </div>
-            <div style={{ fontSize: '2.2rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", marginTop: '0.6rem' }}>
+            <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", lineHeight: 1 }}>
               {calculateAvgResolutionHours()}
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '0.4rem' }}>
-              Benchmark: &lt; 48 hours SLA target
+            <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.5rem' }}>
+              Benchmark: &lt; 48 hrs target
             </div>
           </div>
 
           {/* TEAM CSAT */}
-          <div style={{ background: '#FFFFFF', padding: '1.6rem 1.75rem', borderRadius: '22px', border: '1px solid #E2E8F0', boxShadow: '0 4px 14px rgba(15,23,42,0.03)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#8B5CF6' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Team CSAT Rating</span>
-              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#F59E0B15', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Star size={20} fill="#F59E0B" />
+          <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: '700' }}>Team CSAT Rating</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Star size={16} fill="#D97706" />
               </div>
             </div>
-            <div style={{ fontSize: '2.2rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", marginTop: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {avgRating} <span style={{ fontSize: '1rem', color: '#F59E0B', fontWeight: '800' }}>★</span>
+            <div style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", lineHeight: 1, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              {avgRating} <span style={{ fontSize: '1rem', color: '#F59E0B' }}>★</span>
             </div>
-            <div style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '0.4rem' }}>
+            <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.5rem' }}>
               Complainant feedback score
             </div>
           </div>
@@ -380,30 +357,28 @@ const TLReportsPage = () => {
         </div>
 
         {/* VISUAL ANALYTICS GRID */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1.75rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1.25rem' }}>
           
           {/* DONUT CHART CARD */}
-          <div style={{ background: '#FFFFFF', borderRadius: '24px', border: '1px solid #E2E8F0', padding: '1.75rem', boxShadow: '0 4px 14px rgba(15,23,42,0.03)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.5rem' }}>
-              <div style={{ background: '#EFF6FF', padding: '0.4rem', borderRadius: '10px' }}>
-                <Activity size={20} color="#2563EB" />
-              </div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: 0 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '1.25rem 1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <Activity size={20} color="#0F172A" />
+              <h2 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: 0 }}>
                 Resolution Lifecycle & Status Breakdown
               </h2>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: '1.75rem', padding: '0.5rem 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: '1.5rem', padding: '0.5rem 0' }}>
               
               {/* SVG DONUT CHART */}
-              <div style={{ position: 'relative', width: '160px', height: '160px' }}>
-                <svg width="160" height="160" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="50" cy="50" r="38" fill="none" stroke="#F1F5F9" strokeWidth="16" />
+              <div style={{ position: 'relative', width: '150px', height: '150px' }}>
+                <svg width="150" height="150" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#F1F5F9" strokeWidth="15" />
                   
                   {/* Resolved */}
                   {totalCount > 0 && (
                     <circle 
-                      cx="50" cy="50" r="38" fill="none" stroke="#10B981" strokeWidth="16" 
+                      cx="50" cy="50" r="38" fill="none" stroke="#16A34A" strokeWidth="15" 
                       strokeDasharray={`${(resolvedCount / totalCount) * 238.76} 238.76`}
                       strokeDashoffset="0"
                     />
@@ -411,7 +386,7 @@ const TLReportsPage = () => {
                   {/* In Progress */}
                   {totalCount > 0 && (
                     <circle 
-                      cx="50" cy="50" r="38" fill="none" stroke="#2563EB" strokeWidth="16" 
+                      cx="50" cy="50" r="38" fill="none" stroke="#2563EB" strokeWidth="15" 
                       strokeDasharray={`${(inProgressCount / totalCount) * 238.76} 238.76`}
                       strokeDashoffset={`-${(resolvedCount / totalCount) * 238.76}`}
                     />
@@ -419,7 +394,7 @@ const TLReportsPage = () => {
                   {/* Pending */}
                   {totalCount > 0 && (
                     <circle 
-                      cx="50" cy="50" r="38" fill="none" stroke="#F59E0B" strokeWidth="16" 
+                      cx="50" cy="50" r="38" fill="none" stroke="#D97706" strokeWidth="15" 
                       strokeDasharray={`${(pendingCount / totalCount) * 238.76} 238.76`}
                       strokeDashoffset={`-${((resolvedCount + inProgressCount) / totalCount) * 238.76}`}
                     />
@@ -427,17 +402,17 @@ const TLReportsPage = () => {
                   {/* Escalated */}
                   {totalCount > 0 && (
                     <circle 
-                      cx="50" cy="50" r="38" fill="none" stroke="#EF4444" strokeWidth="16" 
+                      cx="50" cy="50" r="38" fill="none" stroke="#DC2626" strokeWidth="15" 
                       strokeDasharray={`${(escalatedCount / totalCount) * 238.76} 238.76`}
                       strokeDashoffset={`-${((resolvedCount + inProgressCount + pendingCount) / totalCount) * 238.76}`}
                     />
                   )}
                 </svg>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif" }}>
+                  <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif" }}>
                     {resolutionRate}%
                   </span>
-                  <span style={{ fontSize: '0.68rem', color: '#64748B', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>RESOLVED</span>
+                  <span style={{ fontSize: '0.65rem', color: '#64748B', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>RESOLVED</span>
                 </div>
               </div>
 
@@ -476,30 +451,28 @@ const TLReportsPage = () => {
           </div>
 
           {/* CATEGORY PROGRESS BAR CARD */}
-          <div style={{ background: '#FFFFFF', borderRadius: '24px', border: '1px solid #E2E8F0', padding: '1.75rem', boxShadow: '0 4px 14px rgba(15,23,42,0.03)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.5rem' }}>
-              <div style={{ background: '#EFF6FF', padding: '0.4rem', borderRadius: '10px' }}>
-                <Layers size={20} color="#2563EB" />
-              </div>
-              <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: 0 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '1.25rem 1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <Layers size={20} color="#0F172A" />
+              <h2 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: 0 }}>
                 Category Distribution Matrix
               </h2>
             </div>
 
             {Object.keys(categoryCounts).length === 0 ? (
-              <p style={{ color: '#64748B', fontSize: '0.88rem' }}>No category data available in current time window.</p>
+              <p style={{ color: '#64748B', fontSize: '0.85rem' }}>No category data available in current time window.</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {Object.entries(categoryCounts).slice(0, 5).map(([cat, count]) => {
                   const pct = totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
                   return (
-                    <div key={cat} style={{ background: '#F8FAFC', padding: '0.75rem 1rem', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                    <div key={cat} style={{ background: '#F8FAFC', padding: '0.65rem 0.85rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: '700', color: '#334155', marginBottom: '5px' }}>
                         <span>{cat}</span>
                         <span style={{ color: '#2563EB', fontWeight: '800' }}>{count} tickets ({pct}%)</span>
                       </div>
-                      <div style={{ height: '8px', background: '#E2E8F0', borderRadius: '6px', overflow: 'hidden' }}>
-                        <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg, #2563EB, #3B82F6)', borderRadius: '6px' }} />
+                      <div style={{ height: '6px', background: '#E2E8F0', borderRadius: '6px', overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: '#2563EB', borderRadius: '6px' }} />
                       </div>
                     </div>
                   );
@@ -511,31 +484,37 @@ const TLReportsPage = () => {
         </div>
 
         {/* TEAM MEMBER RESOLUTION ACTIVITY TABLE */}
-        <div style={{ background: '#FFFFFF', borderRadius: '24px', border: '1px solid #E2E8F0', padding: '1.75rem', boxShadow: '0 4px 14px rgba(15,23,42,0.03)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <div>
-              <h2 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Users size={20} color="#2563EB" /> Team Staff Resolution Activity
-              </h2>
-              <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '4px 0 0 0' }}>Performance metrics for staff members under your team leadership</p>
+        <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Users size={20} color="#0F172A" />
+              <div>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: 0 }}>
+                  Team Staff Resolution Activity
+                </h2>
+                <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '2px 0 0 0' }}>Performance metrics for staff members under your team leadership</p>
+              </div>
             </div>
+            <span style={{ background: '#EFF6FF', color: '#2563EB', padding: '2px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: '800' }}>
+              {teamMembers.length} Members
+            </span>
           </div>
 
           {teamMembers.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B', fontSize: '0.9rem' }}>
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748B', fontSize: '0.85rem' }}>
               No team members registered under your supervision.
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
-                    <th style={thStyle}>Staff Member</th>
-                    <th style={thStyle}>Employee ID</th>
-                    <th style={thStyle}>Complaints Raised</th>
-                    <th style={thStyle}>Resolved / Closed</th>
-                    <th style={thStyle}>Pending</th>
-                    <th style={thStyle}>Resolution Rate</th>
+                  <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', color: '#64748B', fontWeight: '700' }}>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Staff Member</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Employee ID</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Complaints Raised</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Resolved / Closed</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Pending</th>
+                    <th style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>Resolution Rate</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -551,38 +530,38 @@ const TLReportsPage = () => {
                     const sEff = sTotal > 0 ? Math.round((sResolved / sTotal) * 100) : 'N/A';
 
                     return (
-                      <tr key={staff._id || staff.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                        <td style={{ padding: '1rem 1.1rem', fontWeight: '700', color: '#0F172A', fontSize: '0.9rem' }}>
+                      <tr key={staff._id || staff.id} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background 0.2s ease' }} onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                        <td style={{ padding: '0.85rem 1.25rem', fontWeight: '700', color: '#0F172A' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: '800' }}>
+                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: '800' }}>
                               {staff.name ? staff.name.substring(0, 2).toUpperCase() : 'ST'}
                             </div>
                             <div>
-                              <div>{staff.name}</div>
-                              <div style={{ fontSize: '0.72rem', color: '#64748B' }}>{staff.designation || 'Staff Member'}</div>
+                              <div style={{ fontWeight: '700', color: '#0F172A' }}>{staff.name}</div>
+                              <div style={{ fontSize: '0.7rem', color: '#64748B' }}>{staff.designation || 'Staff Member'}</div>
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: '1rem 1.1rem', color: '#2563EB', fontWeight: '800', fontSize: '0.85rem' }}>
+                        <td style={{ padding: '0.85rem 1rem', color: '#2563EB', fontWeight: '700' }}>
                           {staff.employeeId}
                         </td>
-                        <td style={{ padding: '1rem 1.1rem', fontWeight: '800', color: '#0F172A', fontSize: '0.9rem' }}>
+                        <td style={{ padding: '0.85rem 1rem', fontWeight: '700', color: '#0F172A' }}>
                           {sTotal}
                         </td>
-                        <td style={{ padding: '1rem 1.1rem', color: '#059669', fontWeight: '800', fontSize: '0.9rem' }}>
+                        <td style={{ padding: '0.85rem 1rem', color: '#16A34A', fontWeight: '700' }}>
                           {sResolved}
                         </td>
-                        <td style={{ padding: '1rem 1.1rem', color: '#D97706', fontWeight: '800', fontSize: '0.9rem' }}>
+                        <td style={{ padding: '0.85rem 1rem', color: '#D97706', fontWeight: '700' }}>
                           {sPending}
                         </td>
-                        <td style={{ padding: '1rem 1.1rem' }}>
+                        <td style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>
                           <span style={{ 
-                            background: sEff === 'N/A' ? '#F1F5F9' : (sEff >= 80 ? '#ECFDF5' : '#FFFBEB'), 
-                            color: sEff === 'N/A' ? '#64748B' : (sEff >= 80 ? '#059669' : '#D97706'), 
-                            border: `1px solid ${sEff === 'N/A' ? '#E2E8F0' : (sEff >= 80 ? '#A7F3D0' : '#FDE68A')}`, 
-                            padding: '4px 10px', 
+                            background: sEff === 'N/A' ? '#F1F5F9' : (sEff >= 80 ? '#F0FDF4' : '#FFFBEB'), 
+                            color: sEff === 'N/A' ? '#64748B' : (sEff >= 80 ? '#16A34A' : '#D97706'), 
+                            border: `1px solid ${sEff === 'N/A' ? '#E2E8F0' : (sEff >= 80 ? '#BBF7D0' : '#FDE68A')}`, 
+                            padding: '3px 8px', 
                             borderRadius: '12px', 
-                            fontSize: '0.78rem', 
+                            fontSize: '0.72rem', 
                             fontWeight: '800' 
                           }}>
                             {sEff}{sEff !== 'N/A' && '%'}
@@ -597,32 +576,38 @@ const TLReportsPage = () => {
           )}
         </div>
 
-        {/* DETAILED TEAM COMPLAINT AUDIT REGISTER TABLE (WHITE THEME) */}
-        <div style={{ background: '#FFFFFF', borderRadius: '24px', border: '1px solid #E2E8F0', padding: '1.75rem', boxShadow: '0 4px 14px rgba(15,23,42,0.03)' }}>
+        {/* DETAILED TEAM COMPLAINT AUDIT REGISTER TABLE */}
+        <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           
           {/* HEADER & FILTERS */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.25rem', marginBottom: '1.5rem' }}>
-            <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <ShieldAlert size={20} color="#DC2626" /> Detailed Team Complaint Audit Register
-              </h2>
-              <p style={{ fontSize: '0.82rem', color: '#64748B', margin: '4px 0 0 0' }}>Comprehensive list of team tickets matching current filters</p>
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <ShieldAlert size={20} color="#0F172A" />
+              <div>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: 0 }}>
+                  Team Complaint Audit Register
+                </h2>
+                <p style={{ fontSize: '0.78rem', color: '#64748B', margin: '2px 0 0 0' }}>Comprehensive list of team tickets matching current filters</p>
+              </div>
+              <span style={{ background: '#EFF6FF', color: '#2563EB', padding: '2px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: '800' }}>
+                {finalComplaintsList.length} Records
+              </span>
             </div>
 
             {/* SEARCH & DROPDOWN FILTERS */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', minWidth: '240px' }}>
-                <Search size={15} color="#94A3B8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', width: '220px' }}>
+                <Search size={14} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input 
                   type="text" 
                   value={searchQuery} 
                   onChange={e => setSearchQuery(e.target.value)} 
-                  placeholder="Search complaint ID or name..." 
-                  style={{ width: '100%', padding: '0.55rem 0.75rem 0.55rem 2.2rem', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A', borderRadius: '12px', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }} 
+                  placeholder="Search ID, Subject, Filer..." 
+                  style={{ width: '100%', padding: '0.45rem 0.75rem 0.45rem 2rem', background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A', borderRadius: '6px', fontSize: '0.75rem', outline: 'none', boxSizing: 'border-box' }} 
                 />
               </div>
 
-              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={selectStyle}>
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.75rem', outline: 'none', background: '#F8FAFC', color: '#475569', fontWeight: '600' }}>
                 <option value="All">All Statuses</option>
                 <option value="In Progress">In Progress</option>
                 <option value="Pending">Pending</option>
@@ -630,7 +615,7 @@ const TLReportsPage = () => {
                 <option value="Escalated">Escalated</option>
               </select>
 
-              <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} style={selectStyle}>
+              <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} style={{ padding: '0.45rem 0.75rem', borderRadius: '6px', border: '1px solid #E2E8F0', fontSize: '0.75rem', outline: 'none', background: '#F8FAFC', color: '#475569', fontWeight: '600' }}>
                 <option value="All">All Priorities</option>
                 <option value="Critical">Critical</option>
                 <option value="High">High</option>
@@ -642,28 +627,27 @@ const TLReportsPage = () => {
 
           {/* TABLE CONTENT */}
           {finalComplaintsList.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', background: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0', color: '#64748B', fontSize: '0.9rem' }}>
+            <div style={{ padding: '3rem', textAlign: 'center', color: '#64748B', fontSize: '0.85rem' }}>
               No complaints found matching the selected filters.
             </div>
           ) : (
-            <div style={{ overflowX: 'auto', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8rem' }}>
                 <thead>
-                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-                    <th style={thStyle}>Ticket ID</th>
-                    <th style={thStyle}>Subject & Category</th>
-                    <th style={thStyle}>Complainant</th>
-                    <th style={thStyle}>Priority</th>
-                    <th style={thStyle}>Status</th>
-                    <th style={thStyle}>SLA Clock</th>
-                    <th style={thStyle}>Raised Date</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>Action</th>
+                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B', fontWeight: '700' }}>
+                    <th style={{ padding: '1rem 1.25rem' }}>Ticket ID</th>
+                    <th style={{ padding: '1rem' }}>Subject & Category</th>
+                    <th style={{ padding: '1rem' }}>Complainant</th>
+                    <th style={{ padding: '1rem' }}>Priority</th>
+                    <th style={{ padding: '1rem' }}>Status</th>
+                    <th style={{ padding: '1rem' }}>SLA Clock</th>
+                    <th style={{ padding: '1rem' }}>Raised Date</th>
+                    <th style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {finalComplaintsList.map(c => {
                     const slaText = calculateSLATimeLeft(c.slaDeadline || c.createdAt, c.priority, c.status);
-                    const prio = getPriorityStyle(c.priority);
                     const isBreached = slaText === 'Breached';
                     const isResolved = ['Resolved', 'Closed', 'Approved'].includes(c.status);
 
@@ -675,33 +659,15 @@ const TLReportsPage = () => {
                         onMouseLeave={e => e.currentTarget.style.background='transparent'}
                       >
                         {/* TICKET ID */}
-                        <td style={{ padding: '1rem 1.1rem' }}>
-                          <span 
-                            onClick={() => navigate(`/tl-complaint-details/${c._id}`)} 
-                            style={{ 
-                              fontFamily: "'Outfit', sans-serif", 
-                              fontSize: '0.88rem', 
-                              fontWeight: '800', 
-                              color: '#2563EB', 
-                              cursor: 'pointer',
-                              background: '#EFF6FF',
-                              border: '1px solid #BFDBFE',
-                              padding: '3px 9px',
-                              borderRadius: '8px',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            {c.complaintId} <ArrowUpRight size={12} />
-                          </span>
+                        <td style={{ padding: '1rem 1.25rem', fontWeight: '700', color: '#2563EB' }}>
+                          {c.complaintId}
                         </td>
 
                         {/* SUBJECT & CATEGORY */}
-                        <td style={{ padding: '1rem 1.1rem', maxWidth: '250px' }}>
+                        <td style={{ padding: '1rem', maxWidth: '240px' }}>
                           <div 
                             onClick={() => navigate(`/tl-complaint-details/${c._id}`)}
-                            style={{ fontWeight: '700', color: '#0F172A', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
+                            style={{ fontWeight: '700', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
                           >
                             {c.subject}
                           </div>
@@ -711,8 +677,8 @@ const TLReportsPage = () => {
                         </td>
 
                         {/* COMPLAINANT */}
-                        <td style={{ padding: '1rem 1.1rem' }}>
-                          <div style={{ fontWeight: '700', color: '#0F172A', fontSize: '0.85rem' }}>
+                        <td style={{ padding: '1rem' }}>
+                          <div style={{ fontWeight: '600', color: '#0F172A' }}>
                             {c.createdBy?.name || c.staffName || 'Staff Member'}
                           </div>
                           <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
@@ -721,29 +687,24 @@ const TLReportsPage = () => {
                         </td>
 
                         {/* PRIORITY */}
-                        <td style={{ padding: '1rem 1.1rem' }}>
+                        <td style={{ padding: '1rem' }}>
                           <span style={{ 
-                            background: prio.bg, 
-                            color: prio.color, 
-                            border: `1px solid ${prio.border}`, 
-                            padding: '3px 8px', 
-                            borderRadius: '8px', 
-                            fontSize: '0.72rem', 
-                            fontWeight: '800', 
-                            textTransform: 'uppercase'
+                            fontSize: '0.75rem', 
+                            fontWeight: '700', 
+                            color: c.priority === 'Critical' ? '#DC2626' : c.priority === 'High' ? '#EA580C' : '#64748B'
                           }}>
                             {c.priority}
                           </span>
                         </td>
 
                         {/* STATUS */}
-                        <td style={{ padding: '1rem 1.1rem' }}>
+                        <td style={{ padding: '1rem' }}>
                           <span style={{ 
-                            background: isResolved ? '#ECFDF5' : (c.status === 'Escalated' ? '#FEF2F2' : '#EFF6FF'), 
-                            color: isResolved ? '#059669' : (c.status === 'Escalated' ? '#DC2626' : '#2563EB'), 
-                            border: `1px solid ${isResolved ? '#A7F3D0' : (c.status === 'Escalated' ? '#FCA5A5' : '#BFDBFE')}`, 
-                            padding: '3px 10px', 
-                            borderRadius: '12px', 
+                            background: isResolved ? '#F0FDF4' : (c.status === 'Escalated' ? '#FEF2F2' : '#EFF6FF'), 
+                            color: isResolved ? '#16A34A' : (c.status === 'Escalated' ? '#DC2626' : '#2563EB'), 
+                            border: `1px solid ${isResolved ? '#BBF7D0' : (c.status === 'Escalated' ? '#FECACA' : '#BFDBFE')}`, 
+                            padding: '4px 10px', 
+                            borderRadius: '20px', 
                             fontSize: '0.75rem', 
                             fontWeight: '800' 
                           }}>
@@ -752,39 +713,38 @@ const TLReportsPage = () => {
                         </td>
 
                         {/* SLA CLOCK */}
-                        <td style={{ padding: '1rem 1.1rem' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: '800', color: isBreached ? '#DC2626' : (isResolved ? '#059669' : '#D97706') }}>
-                            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: isBreached ? '#DC2626' : (isResolved ? '#059669' : '#D97706') }} />
+                        <td style={{ padding: '1rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', fontWeight: '700', color: isBreached ? '#DC2626' : (isResolved ? '#16A34A' : '#D97706') }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: isBreached ? '#DC2626' : (isResolved ? '#16A34A' : '#D97706') }} />
                             {slaText}
                           </div>
                         </td>
 
                         {/* RAISED DATE */}
-                        <td style={{ padding: '1rem 1.1rem', fontSize: '0.8rem', color: '#64748B' }}>
-                          {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'N/A'}
+                        <td style={{ padding: '1rem', fontSize: '0.75rem', color: '#64748B' }}>
+                          {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                         </td>
 
                         {/* ACTION BUTTON */}
-                        <td style={{ padding: '1rem 1.1rem', textAlign: 'right' }}>
+                        <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
                           <button 
                             onClick={() => navigate(`/tl-complaint-details/${c._id}`)} 
                             style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '0.35rem', 
                               background: '#2563EB', 
                               color: '#FFFFFF', 
                               border: 'none', 
                               padding: '0.45rem 0.85rem', 
-                              borderRadius: '10px', 
-                              fontSize: '0.78rem', 
-                              fontWeight: '800', 
+                              borderRadius: '6px', 
                               cursor: 'pointer', 
-                              display: 'inline-flex', 
-                              alignItems: 'center', 
-                              gap: '0.35rem',
-                              boxShadow: '0 2px 6px rgba(37,99,235,0.2)',
+                              fontWeight: '700', 
+                              fontSize: '0.75rem',
                               transition: 'all 0.2s ease'
                             }}
                           >
-                            <Eye size={13} /> View Details
+                            <Eye size={14} /> Process Ticket
                           </button>
                         </td>
                       </tr>
@@ -799,27 +759,6 @@ const TLReportsPage = () => {
       </main>
     </div>
   );
-};
-
-const thStyle = {
-  padding: '1rem 1.1rem',
-  fontSize: '0.72rem',
-  fontWeight: '800',
-  color: '#64748B',
-  textTransform: 'uppercase',
-  letterSpacing: '0.06em',
-  whiteSpace: 'nowrap'
-};
-
-const selectStyle = {
-  background: '#F8FAFC',
-  border: '1px solid #E2E8F0',
-  borderRadius: '12px',
-  padding: '0.55rem 0.85rem',
-  fontSize: '0.82rem',
-  fontWeight: '700',
-  color: '#334155',
-  outline: 'none'
 };
 
 export default TLReportsPage;

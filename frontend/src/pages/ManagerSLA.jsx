@@ -252,16 +252,18 @@ const ManagerSLA = () => {
     labels: slaChartData.labels,
     datasets: [
       {
-        label: 'Department SLA Breaches & Escalations',
+        label: 'SLA Breaches & Escalations',
         data: slaChartData.data,
         borderColor: '#DC2626',
         backgroundColor: 'rgba(220, 38, 38, 0.08)',
-        borderWidth: 3,
+        borderWidth: 2.5,
         fill: true,
-        tension: 0.4,
-        pointBackgroundColor: '#DC2626',
-        pointRadius: 5,
-        pointHoverRadius: 7
+        tension: 0.35,
+        pointBackgroundColor: '#FFFFFF',
+        pointBorderColor: '#DC2626',
+        pointBorderWidth: 2.5,
+        pointRadius: 4.5,
+        pointHoverRadius: 6.5
       }
     ]
   };
@@ -270,11 +272,33 @@ const ManagerSLA = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top', labels: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold' } } }
+      legend: { 
+        position: 'top', 
+        labels: { 
+          font: { family: "'Plus Jakarta Sans', sans-serif", weight: '700', size: 12 },
+          color: '#475569',
+          usePointStyle: true,
+          boxWidth: 8
+        } 
+      },
+      tooltip: {
+        backgroundColor: '#0F172A',
+        titleFont: { family: "'Outfit', sans-serif", weight: '700', size: 13 },
+        bodyFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12 },
+        padding: 10,
+        cornerRadius: 8
+      }
     },
     scales: {
-      y: { beginAtZero: true, ticks: { stepSize: 1, font: { weight: 'bold' } } },
-      x: { ticks: { font: { weight: 'bold' } } }
+      y: { 
+        beginAtZero: true, 
+        grid: { color: '#F1F5F9' },
+        ticks: { stepSize: 1, font: { family: "'Plus Jakarta Sans', sans-serif", weight: '600', size: 11 }, color: '#64748B' } 
+      },
+      x: { 
+        grid: { display: false },
+        ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", weight: '600', size: 11 }, color: '#64748B' } 
+      }
     }
   };
 
@@ -315,106 +339,130 @@ const ManagerSLA = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
           
           {/* TOTAL ACTIVE */}
-          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 4px rgba(15,23,42,0.02)' }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Timer size={22}/>
             </div>
             <div>
               <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>ACTIVE UNDER SLA</div>
-              <div style={{ fontSize: '1.35rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
                 {activeCount} Active
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#2563EB', fontWeight: '600', marginTop: '2px' }}>
+                {onTrackCount} on schedule
               </div>
             </div>
           </div>
 
           {/* ON TRACK */}
-          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 4px rgba(15,23,42,0.02)' }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <CheckCircle2 size={22}/>
             </div>
             <div>
-              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>🟢 ON TRACK (WITHIN SLA)</div>
-              <div style={{ fontSize: '1.35rem', fontWeight: '800', color: '#16A34A', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
+              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>ON TRACK (SAFE)</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#10B981', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
                 {onTrackCount} Tickets
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#059669', fontWeight: '600', marginTop: '2px' }}>
+                Within safe SLA limit
               </div>
             </div>
           </div>
 
           {/* AT RISK */}
-          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 4px rgba(15,23,42,0.02)' }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <AlertTriangle size={22}/>
             </div>
             <div>
-              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>🟡 AT RISK (APPROACHING)</div>
-              <div style={{ fontSize: '1.35rem', fontWeight: '800', color: '#D97706', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
+              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>AT RISK (APPROACHING)</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#D97706', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
                 {atRiskCount} Tickets
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#D97706', fontWeight: '600', marginTop: '2px' }}>
+                &gt;75% SLA window consumed
               </div>
             </div>
           </div>
 
           {/* SLA BREACHED */}
-          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 4px rgba(15,23,42,0.02)' }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <AlertCircle size={22}/>
             </div>
             <div>
-              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>🔴 SLA BREACHED</div>
-              <div style={{ fontSize: '1.35rem', fontWeight: '800', color: '#DC2626', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
+              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>SLA BREACHED</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#DC2626', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
                 {breachedCount} Tickets
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#DC2626', fontWeight: '600', marginTop: '2px' }}>
+                Target timeline passed
               </div>
             </div>
           </div>
 
           {/* ESCALATED COMPLAINTS */}
-          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 4px rgba(15,23,42,0.02)' }}>
-            <div style={{ width: '46px', height: '46px', borderRadius: '14px', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ background: '#FFFFFF', padding: '1.35rem', borderRadius: '18px', border: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '1rem', boxShadow: '0 2px 6px rgba(15,23,42,0.02)' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: '#FAF5FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <ShieldAlert size={22}/>
             </div>
             <div>
-              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>⬆️ ESCALATED (MANAGER/HR)</div>
-              <div style={{ fontSize: '1.35rem', fontWeight: '800', color: '#7C3AED', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
+              <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', letterSpacing: '0.5px' }}>ESCALATED COMPLAINTS</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#7C3AED', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
                 {escalatedCount} Escalated
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#7C3AED', fontWeight: '600', marginTop: '2px' }}>
+                Manager / Super Admin level
               </div>
             </div>
           </div>
         </div>
 
         {/* SLA RULES EXPLANATION BANNER */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '18px', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#F1F5F9', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#F8FAFC', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E2E8F0' }}>
               <Sliders size={20} />
             </div>
             <div>
               <div style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0F172A' }}>Active SLA Resolution Windows by Severity</div>
               <div style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '2px' }}>
-                <strong>Critical:</strong> 4h &bull; <strong>High:</strong> 24h &bull; <strong>Medium:</strong> 48h &bull; <strong>Low:</strong> 72h &bull; Auto-escalates to Manager on SLA breach &rarr; HR / Super Admin on L2 breach.
+                <strong>Critical:</strong> 4h &bull; <strong>High:</strong> 24h &bull; <strong>Medium:</strong> 48h &bull; <strong>Low:</strong> 72h &bull; Auto-escalates to Manager on breach &rarr; HR / Super Admin on L2 breach.
               </div>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#F8FAFC', padding: '0.4rem 0.8rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#475569' }}>Department SLA Compliance:</span>
-            <span style={{ fontSize: '0.95rem', fontWeight: '800', color: complianceRate >= 80 ? '#16A34A' : '#DC2626', fontFamily: "'Outfit', sans-serif" }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#F8FAFC', padding: '0.45rem 0.9rem', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748B' }}>Department SLA Compliance:</span>
+            <span style={{ fontSize: '1rem', fontWeight: '800', color: complianceRate >= 80 ? '#10B981' : '#DC2626', fontFamily: "'Outfit', sans-serif" }}>
               {complianceRate}%
             </span>
           </div>
         </div>
 
         {/* CHART SECTION */}
-        <div style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: '20px', border: '1px solid #E2E8F0', boxShadow: '0 4px 14px rgba(15,23,42,0.03)' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <AlertTriangle size={18} color="#DC2626" /> SLA Breach & Escalation Timeline
-          </h3>
-          <div style={{ width: '100%', height: '280px' }}>
+        <div style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: '18px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Activity size={20} color="#DC2626" />
+              <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                Department SLA Breaches & Escalations Trend
+              </h3>
+            </div>
+            <span style={{ background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', fontSize: '0.7rem', fontWeight: '800', padding: '2px 8px', borderRadius: '12px' }}>
+              {breachedCount + escalatedCount} Recorded Events
+            </span>
+          </div>
+          
+          <div style={{ width: '100%', height: '240px', position: 'relative' }}>
             {loading ? (
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <RefreshCw size={32} style={{ color: '#2563EB', animation: 'spin 1s linear infinite' }} />
+                <RefreshCw size={28} style={{ color: '#2563EB', animation: 'spin 1s linear infinite' }} />
               </div>
             ) : slaChartData.labels.length > 0 ? (
               <Line data={chartData} options={chartOptions} />
             ) : (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontWeight: '700' }}>
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontWeight: '600', fontSize: '0.85rem' }}>
                 No SLA Breaches or Escalations Recorded
               </div>
             )}
@@ -422,16 +470,16 @@ const ManagerSLA = () => {
         </div>
 
         {/* SEARCH & FILTERS BAR */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '1.25rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 4px rgba(15,23,42,0.02)' }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '18px', padding: '1.25rem 1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: '280px' }}>
             <div style={{ position: 'relative', width: '100%' }}>
-              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+              <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
               <input 
                 type="text"
                 placeholder="Search ticket ID, subject, staff name, employee ID..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                style={{ width: '100%', padding: '0.6rem 1rem 0.6rem 2.2rem', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.82rem', outline: 'none', background: '#F8FAFC' }}
+                style={{ width: '100%', padding: '0.5rem 1rem 0.5rem 2.2rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem', outline: 'none', background: '#F8FAFC', boxSizing: 'border-box' }}
               />
             </div>
           </div>
@@ -441,21 +489,21 @@ const ManagerSLA = () => {
             <select 
               value={slaStatusFilter} 
               onChange={e => setSlaStatusFilter(e.target.value)}
-              style={{ padding: '0.6rem 1rem', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontWeight: '600', color: '#334155', background: '#F8FAFC', cursor: 'pointer' }}
+              style={{ padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem', fontWeight: '600', color: '#334155', background: '#F8FAFC', cursor: 'pointer', outline: 'none' }}
             >
               <option value="All">All SLA Statuses</option>
-              <option value="OnTrack">🟢 On Track</option>
-              <option value="AtRisk">🟡 At Risk</option>
-              <option value="Breached">🔴 SLA Breached</option>
-              <option value="Escalated">⬆️ Escalated</option>
-              <option value="Resolved">✓ Resolved</option>
+              <option value="OnTrack">On Track</option>
+              <option value="AtRisk">At Risk</option>
+              <option value="Breached">SLA Breached</option>
+              <option value="Escalated">Escalated</option>
+              <option value="Resolved">Resolved</option>
             </select>
 
             {/* Priority Filter */}
             <select 
               value={priorityFilter} 
               onChange={e => setPriorityFilter(e.target.value)}
-              style={{ padding: '0.6rem 1rem', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '0.82rem', fontWeight: '600', color: '#334155', background: '#F8FAFC', cursor: 'pointer' }}
+              style={{ padding: '0.5rem 0.85rem', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.8rem', fontWeight: '600', color: '#334155', background: '#F8FAFC', cursor: 'pointer', outline: 'none' }}
             >
               <option value="All">All Priorities</option>
               <option value="Critical">Critical (4h)</option>
@@ -467,15 +515,18 @@ const ManagerSLA = () => {
         </div>
 
         {/* SLA TRACKING DATA TABLE */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 4px 14px rgba(15,23,42,0.03)' }}>
-          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #E2E8F0', background: '#FAFAFA', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif" }}>
-                Department SLA Monitor Grid
-              </h3>
-              <span style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: '600' }}>
-                Showing {filteredComplaints.length} of {complaints.length} department tickets
-              </span>
+        <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Clock size={20} color="#2563EB" />
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif" }}>
+                  Department SLA Monitor Grid
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>
+                  Showing {filteredComplaints.length} of {complaints.length} department tickets
+                </span>
+              </div>
             </div>
           </div>
 
@@ -491,16 +542,16 @@ const ManagerSLA = () => {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', color: '#475569', fontWeight: '800', fontSize: '0.72rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                    <th style={{ padding: '1rem 1.25rem' }}>Ticket & Priority</th>
-                    <th style={{ padding: '1rem 1.25rem' }}>Subject & Category</th>
-                    <th style={{ padding: '1rem 1.25rem' }}>Complainant</th>
-                    <th style={{ padding: '1rem 1.25rem' }}>SLA Countdown Timer</th>
-                    <th style={{ padding: '1rem 1.25rem' }}>SLA Progress</th>
-                    <th style={{ padding: '1rem 1.25rem' }}>Current Status</th>
-                    <th style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>Actions</th>
+                  <tr style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', color: '#64748B', fontWeight: '800', fontSize: '0.72rem', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Ticket & Priority</th>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Subject & Category</th>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Complainant</th>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>SLA Countdown Timer</th>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>SLA Progress</th>
+                    <th style={{ padding: '0.85rem 1.25rem' }}>Current Status</th>
+                    <th style={{ padding: '0.85rem 1.25rem', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -511,17 +562,20 @@ const ManagerSLA = () => {
                     const sId = c.createdBy?.employeeId || c.staffId || 'ID-N/A';
 
                     return (
-                      <tr key={c._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <tr key={c._id} style={{ borderBottom: '1px solid #F1F5F9', transition: 'background 0.2s ease' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#F8FAFC'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
                         
                         {/* TICKET ID */}
-                        <td style={{ padding: '1.15rem 1.25rem', minWidth: '150px' }}>
+                        <td style={{ padding: '1rem 1.25rem', minWidth: '150px' }}>
                           <span 
                             onClick={() => navigate(`/manager-complaint-details/${c._id}`)} 
-                            style={{ fontFamily: "'Outfit', sans-serif", fontSize: '0.85rem', fontWeight: '800', color: '#2563EB', cursor: 'pointer', textDecoration: 'underline' }}
+                            style={{ fontFamily: "'Outfit', sans-serif", fontSize: '0.85rem', fontWeight: '800', color: '#2563EB', cursor: 'pointer' }}
                           >
                             {c.complaintId}
                           </span>
-                          <div style={{ marginTop: '0.3rem' }}>
+                          <div style={{ marginTop: '0.25rem' }}>
                             <span style={{ 
                               background: c.priority === 'Critical' ? '#FEF2F2' : c.priority === 'High' ? '#FFF7ED' : '#EFF6FF',
                               color: c.priority === 'Critical' ? '#DC2626' : c.priority === 'High' ? '#EA580C' : '#2563EB',
@@ -534,28 +588,28 @@ const ManagerSLA = () => {
                         </td>
 
                         {/* SUBJECT */}
-                        <td style={{ padding: '1.15rem 1.25rem', minWidth: '220px', maxWidth: '280px' }}>
+                        <td style={{ padding: '1rem 1.25rem', minWidth: '220px', maxWidth: '280px' }}>
                           <div 
                             onClick={() => navigate(`/manager-complaint-details/${c._id}`)}
-                            style={{ fontWeight: '700', color: '#0F172A', fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
+                            style={{ fontWeight: '700', color: '#0F172A', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
                           >
                             {c.subject}
                           </div>
-                          <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '3px' }}>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>
                             {c.category}
                           </div>
                         </td>
 
                         {/* COMPLAINANT */}
-                        <td style={{ padding: '1.15rem 1.25rem', minWidth: '150px' }}>
-                          <div style={{ fontWeight: '700', color: '#0F172A', fontSize: '0.85rem' }}>{sName}</div>
-                          <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>{sId}</div>
+                        <td style={{ padding: '1rem 1.25rem', minWidth: '150px' }}>
+                          <div style={{ fontWeight: '700', color: '#0F172A', fontSize: '0.82rem' }}>{sName}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>ID: {sId}</div>
                         </td>
 
                         {/* COUNTDOWN TIMER */}
-                        <td style={{ padding: '1.15rem 1.25rem', minWidth: '170px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', fontWeight: '800', color: m.isResolved ? '#059669' : m.remainingMins <= 0 ? '#DC2626' : m.remainingMins <= 120 ? '#D97706' : '#2563EB' }}>
-                            <Clock size={14} />
+                        <td style={{ padding: '1rem 1.25rem', minWidth: '170px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: '800', color: m.isResolved ? '#059669' : m.remainingMins <= 0 ? '#DC2626' : m.remainingMins <= 120 ? '#D97706' : '#2563EB' }}>
+                            <Clock size={13} />
                             {remainingLabel}
                           </div>
                           <div style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '2px' }}>
@@ -564,12 +618,12 @@ const ManagerSLA = () => {
                         </td>
 
                         {/* SLA PROGRESS BAR */}
-                        <td style={{ padding: '1.15rem 1.25rem', minWidth: '160px' }}>
+                        <td style={{ padding: '1rem 1.25rem', minWidth: '160px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', fontWeight: '800', marginBottom: '4px', color: '#475569' }}>
                             <span>{m.consumedPercent}% consumed</span>
                             {m.isPaused && <span style={{ color: '#D97706' }}>⏸ PAUSED</span>}
                           </div>
-                          <div style={{ width: '100%', height: '7px', background: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: '100%', height: '6px', background: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
                             <div style={{
                               width: `${m.consumedPercent}%`,
                               height: '100%',
@@ -580,7 +634,7 @@ const ManagerSLA = () => {
                         </td>
 
                         {/* CURRENT SLA STATUS */}
-                        <td style={{ padding: '1.15rem 1.25rem', minWidth: '170px' }}>
+                        <td style={{ padding: '1rem 1.25rem', minWidth: '170px' }}>
                           <span style={{
                             background: m.statusBg,
                             color: m.statusColor,
@@ -600,12 +654,12 @@ const ManagerSLA = () => {
                         </td>
 
                         {/* ACTIONS */}
-                        <td style={{ padding: '1.15rem 1.25rem', textAlign: 'right', minWidth: '160px' }}>
+                        <td style={{ padding: '1rem 1.25rem', textAlign: 'right', minWidth: '160px' }}>
                           <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                             <button 
                               onClick={() => navigate(`/manager-complaint-details/${c._id}`)}
                               title="View & Manage Complaint"
-                              style={{ background: '#2563EB', color: '#FFFFFF', border: 'none', padding: '0.42rem 0.75rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', boxShadow: '0 2px 4px rgba(37,99,235,0.2)' }}
+                              style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.2s ease' }}
                             >
                               <ChevronRight size={13} /> View Details
                             </button>
@@ -613,7 +667,7 @@ const ManagerSLA = () => {
                             <button 
                               onClick={() => setTimelineModalComplaint(c)}
                               title="View Audit History Timeline"
-                              style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#475569', padding: '0.42rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                              style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', color: '#475569', padding: '0.35rem 0.65rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
                             >
                               <Layers size={12} /> Timeline
                             </button>

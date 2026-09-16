@@ -126,12 +126,12 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  // Key Statistics
+  // Key Statistics (Mutually exclusive for precise 100% breakdown)
   const totalComplaints = complaints.length;
   const resolvedCount = complaints.filter(c => ['Resolved', 'Closed', 'Approved'].includes(c.status)).length;
-  const inProgressCount = complaints.filter(c => ['In Progress', 'Waiting on User', 'Pending HR Review'].includes(c.status)).length;
-  const pendingCount = complaints.filter(c => ['Pending', 'Submitted'].includes(c.status)).length;
-  const escalatedCount = complaints.filter(c => c.escalated || c.escalatedToSuperAdmin || c.status === 'Escalated' || c.status === 'Escalated to Super Admin').length;
+  const escalatedCount = complaints.filter(c => (c.escalated || c.escalatedToSuperAdmin || c.status === 'Escalated' || c.status === 'Escalated to Super Admin') && !['Resolved', 'Closed', 'Approved'].includes(c.status)).length;
+  const inProgressCount = complaints.filter(c => ['In Progress', 'Waiting on User'].includes(c.status) && !c.escalated && !c.escalatedToSuperAdmin && !c.status?.includes('Escalated')).length;
+  const pendingCount = complaints.filter(c => ['Pending', 'Submitted', 'Pending HR Review', 'Rejected', 'Cancelled'].includes(c.status) && !c.escalated && !c.escalatedToSuperAdmin && !c.status?.includes('Escalated')).length;
   const criticalCount = complaints.filter(c => c.priority === 'Critical').length;
   const clearanceRate = totalComplaints > 0 ? Math.round((resolvedCount / totalComplaints) * 100) : 100;
 

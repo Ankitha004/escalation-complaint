@@ -43,17 +43,19 @@ const CountdownTimer = ({ deadline }) => {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '0.4rem',
-        padding: '0.2rem 0.6rem',
-        borderRadius: '6px',
-        background: isOverdue ? '#FEE2E2' : '#F1F5F9',
-        color: isOverdue ? '#DC2626' : '#475569',
-        fontSize: '0.72rem',
+        gap: '0.45rem',
+        padding: '0.28rem 0.65rem',
+        borderRadius: '8px',
+        background: isOverdue ? '#FEF2F2' : '#EFF6FF',
+        color: isOverdue ? '#DC2626' : '#2563EB',
+        fontSize: '0.74rem',
         fontWeight: '700',
-        border: `1px solid ${isOverdue ? '#FECACA' : '#E2E8F0'}`,
+        border: `1px solid ${isOverdue ? '#FECACA' : '#BFDBFE'}`,
+        boxShadow: isOverdue ? '0 1px 4px rgba(220, 38, 38, 0.1)' : '0 1px 3px rgba(37, 99, 235, 0.08)',
+        letterSpacing: '0.01em'
       }}
     >
-      <Clock size={12} />
+      <Clock size={13} style={{ flexShrink: 0, color: isOverdue ? '#DC2626' : '#2563EB' }} />
       <span>
         {isOverdue ? timeLeft : `Escalates in: ${timeLeft}`}
       </span>

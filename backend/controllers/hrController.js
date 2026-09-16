@@ -519,32 +519,62 @@ const updateHRComplaintStatus = async (req, res, next) => {
       throw new Error('Complaint not found');
     }
 
-    const newStatus = status || (action === 'accept' ? 'In Progress' : action === 'reject' ? 'Rejected' : complaint.status);
+    const isApproveAndClose = action === 'approve_and_close' || action === 'approve_close';
+    const newStatus = isApproveAndClose ? 'Closed' : (status || (action === 'accept' ? 'In Progress' : action === 'reject' ? 'Rejected' : complaint.status));
     complaint.status = newStatus;
 
     let timelineTitle = `Status changed to ${newStatus}`;
-    if (action === 'accept' || newStatus === 'In Progress') {
+    if (isApproveAndClose) {
+      timelineTitle = 'HR Approved & Closed';
+      complaint.status = 'Closed';
+      complaint.closedDate = new Date();
+      if (!complaint.resolvedDate) {
+        complaint.resolvedDate = new Date();
+      }
+      // Mark all pending resolution reports as reviewed by HR
+      if (complaint.resolutionReports && complaint.resolutionReports.length > 0) {
+        complaint.resolutionReports.forEach(r => {
+          r.isReviewed = true;
+        });
+      }
+    } else if (action === 'accept' || newStatus === 'In Progress') {
       timelineTitle = 'Accepted by HR';
     } else if (action === 'reject' || newStatus === 'Rejected') {
       timelineTitle = 'Rejected by HR';
     } else if (newStatus === 'Resolved') {
       timelineTitle = 'Resolved by HR';
       complaint.resolvedDate = new Date();
+      complaint.resolutionReports.push({
+        solvedBy: req.user._id,
+        solverName: req.user.name,
+        solverRole: 'HR',
+        reportText: note || `Issue marked resolved by HR ${req.user.name}.`,
+        forwardedTo: 'Super Admin',
+        isReviewed: true,
+        createdAt: new Date()
+      });
     } else if (newStatus === 'Closed') {
-      timelineTitle = 'Closed';
+      timelineTitle = 'Closed by HR';
       complaint.closedDate = new Date();
+      if (complaint.resolutionReports && complaint.resolutionReports.length > 0) {
+        complaint.resolutionReports.forEach(r => {
+          r.isReviewed = true;
+        });
+      }
     }
 
     complaint.timeline.push({
       title: timelineTitle,
-      description: note || `Updated by HR ${req.user.name} (${req.user.employeeId || 'HR'})`,
+      description: note || (isApproveAndClose 
+        ? `Resolution report approved and ticket closed by HR ${req.user.name} (${req.user.employeeId || 'HR'}).` 
+        : `Updated by HR ${req.user.name} (${req.user.employeeId || 'HR'})`),
       updatedBy: req.user._id,
       updatedByName: req.user.name,
       timestamp: new Date()
     });
 
     const updated = await complaint.save();
-    if (newStatus === 'Resolved') {
+    if (newStatus === 'Resolved' || isApproveAndClose) {
       await notifyHRAndSuperAdminOnResolution(updated, req.user ? req.user.name : '');
     }
     res.json(updated);

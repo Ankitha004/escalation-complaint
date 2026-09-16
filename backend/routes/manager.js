@@ -11,7 +11,8 @@ const {
   addManagerComment,
   getTeamLeaderPerformance,
   forwardReportToHR,
-  submitManagerResolutionReport
+  submitManagerResolutionReport,
+  escalateToSuperAdmin
 } = require('../controllers/managerController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
@@ -51,5 +52,8 @@ router.route('/complaints/:id/forward-report')
 
 router.route('/complaints/:id/resolve-report')
   .post(submitManagerResolutionReport);
+
+router.route('/complaints/:id/escalate-superadmin')
+  .put(escalateToSuperAdmin);
 
 module.exports = router;

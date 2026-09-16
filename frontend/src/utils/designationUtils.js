@@ -20,22 +20,54 @@ export const DEPARTMENT_DESIGNATIONS = {
     'Billing Specialist',
     'Audit Executive'
   ],
-  'HR & Personnel Admin': [
+  'Human Resources': [
     'HR Executive',
     'HR Generalist',
+    'Senior HR Specialist',
+    'HR Operations Lead',
     'Talent Acquisition Specialist',
     'Onboarding Specialist',
     'Employee Relations Officer'
   ],
+  'HR & Personnel Admin': [
+    'HR Executive',
+    'HR Generalist',
+    'Senior HR Specialist',
+    'HR Operations Lead',
+    'Talent Acquisition Specialist',
+    'Onboarding Specialist',
+    'Employee Relations Officer'
+  ],
+  'Operations & Facilities': [
+    'Operations Executive',
+    'Workplace & Hardware Specialist',
+    'Facilities Coordinator',
+    'Facilities Operations Lead',
+    'Operations Coordinator',
+    'Process Specialist',
+    'Escalation Analyst'
+  ],
   'Operations': [
     'Operations Executive',
+    'Workplace & Hardware Specialist',
+    'Facilities Coordinator',
+    'Facilities Operations Lead',
     'Process Specialist',
     'Escalation Analyst',
     'Quality Control Analyst',
     'Operations Coordinator'
   ],
+  'Sales & Marketing': [
+    'Account Executive',
+    'Digital Marketing Associate',
+    'Marketing Specialist',
+    'Sales Development Representative',
+    'Growth Specialist',
+    'Content & Brand Associate'
+  ],
   'Customer Support': [
     'Customer Support Representative',
+    'Customer Success Specialist',
     'Senior Support Executive',
     'Technical Support Associate',
     'Helpdesk Specialist',
@@ -63,13 +95,16 @@ export const getDesignationsForDepartment = (deptName) => {
     return DEPARTMENT_DESIGNATIONS['Finance & Accounting'];
   }
   if (d.includes('hr') || d.includes('personnel') || d.includes('human')) {
-    return DEPARTMENT_DESIGNATIONS['HR & Personnel Admin'];
+    return DEPARTMENT_DESIGNATIONS['Human Resources'];
+  }
+  if (d.includes('sales') || d.includes('marketing') || d.includes('growth')) {
+    return DEPARTMENT_DESIGNATIONS['Sales & Marketing'];
   }
   if (d.includes('support') || d.includes('customer') || d.includes('helpdesk')) {
     return DEPARTMENT_DESIGNATIONS['Customer Support'];
   }
-  if (d.includes('operation')) {
-    return DEPARTMENT_DESIGNATIONS['Operations'];
+  if (d.includes('operation') || d.includes('facilit')) {
+    return DEPARTMENT_DESIGNATIONS['Operations & Facilities'];
   }
   
   return [

@@ -352,6 +352,38 @@ export default function ResolutionCertificateModal({ complaint, onClose }) {
               )}
             </div>
 
+            {/* Formal Resolution Report & Root Cause Findings (if submitted) */}
+            {complaint.resolutionReports && complaint.resolutionReports.length > 0 && (
+              <div 
+                style={{
+                  background: '#F0FDF4',
+                  border: '1px solid #BBF7D0',
+                  borderRadius: '12px',
+                  padding: '0.85rem 1.25rem',
+                  maxWidth: '740px',
+                  margin: '0 auto 1rem auto',
+                  textAlign: 'left',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.35rem'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Resolution Report & Corrective Action Summary
+                  </span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: '700', color: '#15803D', background: '#DCFCE7', padding: '2px 8px', borderRadius: '6px', border: '1px solid #86EFAC' }}>
+                    Submitted to HR Audit
+                  </span>
+                </div>
+                {complaint.resolutionReports.map((r, i) => (
+                  <div key={i} style={{ fontSize: '0.82rem', color: '#14532D', lineHeight: 1.45 }}>
+                    <strong style={{ color: '#166534' }}>Report by {r.solverName || 'Resolver'} ({r.solverRole || 'Team Leader'}):</strong> {r.reportText}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Resolution Audit Metadata Grid */}
             <div 
               style={{

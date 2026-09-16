@@ -78,13 +78,21 @@ const EmployeeDashboard = () => {
   const myLeaves = leaveRequests;
 
   // Clock In / Out Handler
+  const [clockingLoading, setClockingLoading] = useState(false);
+
   const handleClockIn = async () => {
+    if (clockingLoading) return;
+    setClockingLoading(true);
     try {
-      const res = await API.post('/attendance');
+      const isClockedIn = myAttendance && myAttendance.clockIn && myAttendance.clockIn !== '--:--' && (!myAttendance.clockOut || myAttendance.clockOut === 'In Progress');
+      const action = isClockedIn ? 'clockOut' : 'clockIn';
+      const res = await API.post('/attendance', { action });
       alert(res.data.message);
-      fetchData();
+      await fetchData();
     } catch (error) {
-      alert(error.response?.data?.message || 'Error clocking in/out');
+      alert(error.response?.data?.message || 'Error updating attendance');
+    } finally {
+      setClockingLoading(false);
     }
   };
 
@@ -93,9 +101,34 @@ const EmployeeDashboard = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [leaveReason, setLeaveReason] = useState('');
+  const [leaveDateError, setLeaveDateError] = useState('');
+
+  const todayStr = new Date().toISOString().split('T')[0];
 
   const handleApplyLeave = async (e) => {
     e.preventDefault();
+    setLeaveDateError('');
+
+    if (!startDate) {
+      setLeaveDateError('Please select a start date.');
+      return;
+    }
+
+    if (startDate < todayStr) {
+      setLeaveDateError('Start date cannot be in the past.');
+      return;
+    }
+
+    if (!endDate) {
+      setLeaveDateError('Please select an end date.');
+      return;
+    }
+
+    if (endDate < startDate) {
+      setLeaveDateError('End date cannot be earlier than start date.');
+      return;
+    }
+
     try {
       await API.post('/leaves', {
         type: leaveType,
@@ -107,6 +140,7 @@ const EmployeeDashboard = () => {
       setStartDate('');
       setEndDate('');
       setLeaveReason('');
+      setLeaveDateError('');
       fetchData();
     } catch (error) {
       alert(error.response?.data?.message || 'Error submitting leave');
@@ -160,12 +194,12 @@ const EmployeeDashboard = () => {
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* SIDEBAR */}
         <aside className="sidebar-nav-container">
-          <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94A3B8', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '1rem', padding: '0 0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94A3B8', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '1rem', padding: '0 0.5rem', flexShrink: 0 }}>
               SELF-SERVICE DESK
             </div>
 
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto', flex: 1, paddingRight: '0.2rem' }}>
               {[
                 { id: 'profile', label: 'My Profile', icon: User },
                 { id: 'attendance', label: 'Attendance Clock-In', icon: Clock },
@@ -198,7 +232,7 @@ const EmployeeDashboard = () => {
             </nav>
           </div>
 
-          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', background: '#F8FAFC', borderRadius: '14px', border: '1px solid var(--border-color)', marginBottom: '0.85rem' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary-gradient)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>
                 {user?.name ? user.name.charAt(0).toUpperCase() : 'E'}
@@ -333,10 +367,21 @@ const EmployeeDashboard = () => {
 
                 <button
                   onClick={handleClockIn}
+                  disabled={clockingLoading}
                   className="btn-primary-enterprise"
-                  style={{ width: 'auto', margin: '0 auto', padding: '0.8rem 2rem' }}
+                  style={{ 
+                    width: 'auto', 
+                    margin: '0 auto', 
+                    padding: '0.8rem 2rem',
+                    opacity: clockingLoading ? 0.7 : 1,
+                    cursor: clockingLoading ? 'not-allowed' : 'pointer'
+                  }}
                 >
-                  {myAttendance && myAttendance.clockOut === 'In Progress' ? 'Clock Out Now' : 'Clock In Now'}
+                  {clockingLoading 
+                    ? 'Processing...' 
+                    : (myAttendance && myAttendance.clockIn && myAttendance.clockIn !== '--:--' && (!myAttendance.clockOut || myAttendance.clockOut === 'In Progress') 
+                        ? 'Clock Out Now' 
+                        : 'Clock In Now')}
                 </button>
               </div>
             </div>
@@ -560,14 +605,54 @@ const EmployeeDashboard = () => {
                   </select>
                 </div>
 
+                {leaveDateError && (
+                  <div style={{
+                    padding: '0.65rem 0.85rem',
+                    background: '#FEF2F2',
+                    border: '1px solid #FCA5A5',
+                    borderRadius: '8px',
+                    color: '#B91C1C',
+                    fontSize: '0.82rem',
+                    fontWeight: '600'
+                  }}>
+                    {leaveDateError}
+                  </div>
+                )}
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                   <div className="form-group-custom">
                     <label className="form-label-custom">Start Date</label>
-                    <input type="date" className="form-control-custom" value={startDate} onChange={(e) => setStartDate(e.target.value)} required style={{ paddingLeft: '1rem', backgroundColor: '#FFFFFF' }} />
+                    <input 
+                      type="date" 
+                      className="form-control-custom" 
+                      value={startDate} 
+                      min={todayStr}
+                      onChange={(e) => {
+                        const newStart = e.target.value;
+                        setStartDate(newStart);
+                        if (endDate && newStart > endDate) {
+                          setEndDate(newStart);
+                        }
+                        if (leaveDateError) setLeaveDateError('');
+                      }} 
+                      required 
+                      style={{ paddingLeft: '1rem', backgroundColor: '#FFFFFF' }} 
+                    />
                   </div>
                   <div className="form-group-custom">
                     <label className="form-label-custom">End Date</label>
-                    <input type="date" className="form-control-custom" value={endDate} onChange={(e) => setEndDate(e.target.value)} required style={{ paddingLeft: '1rem', backgroundColor: '#FFFFFF' }} />
+                    <input 
+                      type="date" 
+                      className="form-control-custom" 
+                      value={endDate} 
+                      min={startDate || todayStr}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        if (leaveDateError) setLeaveDateError('');
+                      }} 
+                      required 
+                      style={{ paddingLeft: '1rem', backgroundColor: '#FFFFFF' }} 
+                    />
                   </div>
                 </div>
 

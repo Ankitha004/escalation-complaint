@@ -28,6 +28,18 @@ const leaveSchema = new mongoose.Schema(
       enum: ['Pending Approval', 'Pending Team Leader Approval', 'Approved', 'Rejected'],
       default: 'Pending Approval',
     },
+    isEmergencyLeave: {
+      type: Boolean,
+      default: false,
+    },
+    deductionDays: {
+      type: Number,
+      default: 0,
+    },
+    salaryDeductionAmount: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

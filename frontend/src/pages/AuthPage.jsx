@@ -42,7 +42,6 @@ const AuthPage = () => {
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regDepartment, setRegDepartment] = useState('IT & Software');
-  const [regJobTitle, setRegJobTitle] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [regTouched, setRegTouched] = useState({});
@@ -75,11 +74,6 @@ const AuthPage = () => {
         if (!value.trim()) err = 'Phone number is required';
         else if (value.trim().length !== 10 || !/^[0-9]{10}$/.test(value.trim())) err = 'Phone number must be exactly 10 digits';
         break;
-      case 'regJobTitle':
-        if (!value.trim()) err = 'Job title is required';
-        else if (value.includes('@') || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) err = 'Enter a valid job title, not an email address';
-        else if (value.trim().length < 2) err = 'Job title must be at least 2 characters';
-        break;
       case 'regPassword':
         if (!value) err = 'Password is required';
         else if (value.length < 6) err = 'Password must be at least 6 characters';
@@ -110,8 +104,6 @@ const AuthPage = () => {
       setRegEmail(value);
     } else if (field === 'regDepartment') {
       setRegDepartment(value);
-    } else if (field === 'regJobTitle') {
-      setRegJobTitle(value);
     } else if (field === 'regPassword') {
       setRegPassword(value);
       if (regTouched.regConfirmPassword) {
@@ -242,7 +234,6 @@ const AuthPage = () => {
       regFullName: validateRegisterField('regFullName', regFullName),
       regEmail: validateRegisterField('regEmail', regEmail),
       regPhone: validateRegisterField('regPhone', regPhone),
-      regJobTitle: validateRegisterField('regJobTitle', regJobTitle),
       regPassword: validateRegisterField('regPassword', regPassword),
       regConfirmPassword: validateRegisterField('regConfirmPassword', regConfirmPassword, regPassword)
     };
@@ -251,7 +242,6 @@ const AuthPage = () => {
       regFullName: true,
       regEmail: true,
       regPhone: true,
-      regJobTitle: true,
       regPassword: true,
       regConfirmPassword: true
     });
@@ -270,7 +260,6 @@ const AuthPage = () => {
       email: regEmail,
       phone: regPhone,
       department: regDepartment,
-      jobTitle: regJobTitle,
       password: regPassword,
       role: selectedRole
     };
@@ -729,34 +718,6 @@ const AuthPage = () => {
                     ))}
                   </select>
                 </div>
-              </div>
-
-              {/* Job Title / Designation */}
-              <div className="register-field-group">
-                <label className="register-field-label">Job Title <span className="req-star">*</span></label>
-                <div className={`register-input-wrapper ${regTouched.regJobTitle ? (regErrors.regJobTitle ? 'invalid' : 'valid') : ''}`}>
-                  <Briefcase className="register-field-icon" size={18} />
-                  <input
-                    type="text"
-                    name="regJobTitle"
-                    id="regJobTitle"
-                    autoComplete="off"
-                    className="register-input-control"
-                    placeholder="e.g. Software Engineer"
-                    value={regJobTitle}
-                    onChange={(e) => handleFieldChange('regJobTitle', e.target.value)}
-                    onBlur={(e) => handleFieldBlur('regJobTitle', e.target.value)}
-                  />
-                  {regTouched.regJobTitle && !regErrors.regJobTitle && (
-                    <CheckCircle2 className="field-status-icon valid" size={16} />
-                  )}
-                </div>
-                {regTouched.regJobTitle && regErrors.regJobTitle && (
-                  <div className="field-validation-msg error">
-                    <AlertCircle size={13} />
-                    <span>{regErrors.regJobTitle}</span>
-                  </div>
-                )}
               </div>
 
               {/* Account Role Dropdown (Secondary indicator) */}

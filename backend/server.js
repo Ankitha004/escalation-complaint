@@ -69,9 +69,30 @@ app.use('/api/leaves', leavesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/announcements', announcementRoutes);
 
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'online',
+    dbReady,
+    activeDbMode,
+    timestamp: new Date()
+  });
+});
+
+app.post('/api/sync', async (req, res) => {
+  const onlineUri = process.env.MONGO_URI;
+  const localUri = process.env.MONGO_LOCAL_URI || 'mongodb://127.0.0.1:27017/complaint_management';
+  try {
+    const success = await syncDatabases(onlineUri, localUri);
+    res.json({ success, message: success ? 'Synchronized online and local databases' : 'Sync encountered issues' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.get('/', (req, res) => {
   res.send('Complaint Management System API is Running...');
 });
+
 
 // Error Middleware
 app.use(notFound);
@@ -122,38 +143,86 @@ const migrateDatabase = async () => {
   }
 };
 
-// Connect to MongoDB Atlas with robust retry logic
+const { syncDatabases } = require('./utils/syncDb');
+
+// Database status indicators
+let activeDbMode = 'Disconnected'; // 'Atlas (Online)', 'Local MongoDB (Offline fallback)', or 'Disconnected'
+
+// Connect to MongoDB with Dual Online + Local Fallback and Auto-Sync
 const connectDB = async () => {
+  const onlineUri = process.env.MONGO_URI;
+  const localUri = process.env.MONGO_LOCAL_URI || 'mongodb://127.0.0.1:27017/complaint_management';
+
+  // 1. Try connecting to MongoDB Atlas (Online)
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 15000,
-      connectTimeoutMS: 15000,
+    console.log('🔄 Attempting connection to MongoDB Atlas (Online)...');
+    await mongoose.connect(onlineUri, {
+      serverSelectionTimeoutMS: 8000,
+      connectTimeoutMS: 8000,
     });
-    console.log('✅ MongoDB Atlas Connected Successfully');
+    activeDbMode = 'Atlas (Online)';
+    console.log('✅ Connected to MongoDB Atlas (Online)!');
+    dbReady = true;
+
+    // Trigger asynchronous sync of online data to local DB so local copy stays fresh
+    syncDatabases(onlineUri, localUri).then(synced => {
+      if (synced) console.log('📦 Local database synchronized with online Atlas.');
+    }).catch(() => {});
+
+    await migrateDatabase();
+    return;
+  } catch (atlasErr) {
+    console.warn('⚠️ Could not connect to MongoDB Atlas (Online):', atlasErr.message);
+  }
+
+  // 2. Fallback to Local MongoDB
+  try {
+    console.log('🔄 Falling back to Local MongoDB (mongodb://127.0.0.1:27017)...');
+    await mongoose.connect(localUri, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+    });
+    activeDbMode = 'Local MongoDB (Offline fallback)';
+    console.log('✅ Connected to Local MongoDB successfully (High-speed & Offline ready)!');
     dbReady = true;
     await migrateDatabase();
-  } catch (err) {
-    console.error('❌ MongoDB Atlas Connection Notice:', err.message);
-    console.log('🔄 Retrying MongoDB connection in 5 seconds...');
-    setTimeout(connectDB, 5000);
+    return;
+  } catch (localErr) {
+    console.error('❌ Local MongoDB Connection Error:', localErr.message);
   }
+
+  // 3. Retry connection cycle in 5 seconds if both failed
+  console.log('🔄 Retrying database connection in 5 seconds...');
+  setTimeout(connectDB, 5000);
 };
 
+// Periodic background sync: Keep local and online databases in sync whenever both are reachable
+setInterval(async () => {
+  const onlineUri = process.env.MONGO_URI;
+  const localUri = process.env.MONGO_LOCAL_URI || 'mongodb://127.0.0.1:27017/complaint_management';
+  
+  if (dbReady) {
+    try {
+      if (activeDbMode.includes('Atlas')) {
+        await syncDatabases(onlineUri, localUri);
+      } else if (activeDbMode.includes('Local')) {
+        // Try backing up local changes to Atlas
+        await syncDatabases(localUri, onlineUri);
+      }
+    } catch (e) {}
+  }
+}, 5 * 60 * 1000); // sync every 5 minutes
+
 mongoose.connection.on('error', err => {
-  console.error('❌ MongoDB Connection Error:', err.message);
+  console.error('❌ MongoDB Active Connection Error:', err.message);
   dbReady = false;
 });
 
 mongoose.connection.on('disconnected', () => {
+  console.warn('⚠️ MongoDB disconnected, initiating dual reconnection routine...');
   dbReady = false;
-  // Automatically attempt reconnect on connection drop
   if (mongoose.connection.readyState === 0) {
-    setTimeout(() => {
-      mongoose.connect(process.env.MONGO_URI, {
-        serverSelectionTimeoutMS: 15000,
-        connectTimeoutMS: 15000,
-      }).catch(e => console.warn('Reconnect notice:', e.message));
-    }, 2000);
+    setTimeout(connectDB, 3000);
   }
 });
 

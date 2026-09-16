@@ -49,7 +49,20 @@ const SuperAdminSidebar = ({ activeTab = 'overview' }) => {
   });
 
   return (
-    <aside style={{ width: '280px', background: 'linear-gradient(180deg, #0F172A 0%, #1E3A8A 100%)', borderRight: '1px solid rgba(255, 255, 255, 0.08)', color: '#F8FAFC', display: 'flex', flexDirection: 'column', minHeight: '100vh', flexShrink: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <aside style={{ 
+      width: '280px', 
+      background: 'linear-gradient(180deg, #0F172A 0%, #1E3A8A 100%)', 
+      borderRight: '1px solid rgba(255, 255, 255, 0.08)', 
+      color: '#F8FAFC', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      height: '100vh', 
+      position: 'sticky',
+      top: 0,
+      flexShrink: 0, 
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      boxSizing: 'border-box'
+    }}>
       <div style={{ padding: '2rem 1.5rem 1rem 1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(37,99,235,0.35)' }}>
@@ -164,7 +177,7 @@ const SuperAdminSidebar = ({ activeTab = 'overview' }) => {
         </nav>
       </div>
 
-      <div style={{ marginTop: 'auto', padding: '1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+      <div style={{ marginTop: 'auto', padding: '1.15rem 1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', flexShrink: 0 }}>
         <button onClick={handleLogout} style={{ width: '100%', background: 'rgba(255, 255, 255, 0.06)', color: '#FCA5A5', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.85rem', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: '700', cursor: 'pointer' }}>
           <LogOut size={18} /> Logout
         </button>

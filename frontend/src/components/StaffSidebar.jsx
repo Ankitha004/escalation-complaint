@@ -35,9 +35,12 @@ const StaffSidebar = ({ activeTab = 'dashboard', unreadCount = 0 }) => {
       display: 'flex', 
       flexDirection: 'column', 
       flexShrink: 0, 
-      minHeight: '100vh',
+      height: '100vh', 
+      position: 'sticky',
+      top: 0,
       borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-      fontFamily: "'Plus Jakarta Sans', sans-serif"
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      boxSizing: 'border-box'
     }}>
       
       {/* BRAND HEADER */}
@@ -79,7 +82,7 @@ const StaffSidebar = ({ activeTab = 'dashboard', unreadCount = 0 }) => {
 
         {/* COMPLAINTS SECTION */}
         <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: '700', color: '#475569', letterSpacing: '0.08em', marginBottom: '0.4rem', paddingLeft: '0.75rem', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#94A3B8', letterSpacing: '0.08em', marginBottom: '0.4rem', paddingLeft: '0.75rem', textTransform: 'uppercase' }}>
             COMPLAINTS
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -95,11 +98,9 @@ const StaffSidebar = ({ activeTab = 'dashboard', unreadCount = 0 }) => {
           </div>
         </div>
 
-
-
         {/* COMMUNICATION SECTION */}
         <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: '700', color: '#475569', letterSpacing: '0.08em', marginBottom: '0.4rem', paddingLeft: '0.75rem', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#94A3B8', letterSpacing: '0.08em', marginBottom: '0.4rem', paddingLeft: '0.75rem', textTransform: 'uppercase' }}>
             COMMUNICATION
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -141,7 +142,7 @@ const StaffSidebar = ({ activeTab = 'dashboard', unreadCount = 0 }) => {
 
         {/* ACCOUNT SECTION */}
         <div>
-          <div style={{ fontSize: '0.68rem', fontWeight: '700', color: '#475569', letterSpacing: '0.08em', marginBottom: '0.4rem', paddingLeft: '0.75rem', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#94A3B8', letterSpacing: '0.08em', marginBottom: '0.4rem', paddingLeft: '0.75rem', textTransform: 'uppercase' }}>
             ACCOUNT
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
@@ -153,8 +154,41 @@ const StaffSidebar = ({ activeTab = 'dashboard', unreadCount = 0 }) => {
 
       </div>
 
-      {/* LOGOUT FOOTER */}
-      <div style={{ padding: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+      {/* USER PROFILE & LOGOUT FOOTER */}
+      <div style={{ padding: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', flexDirection: 'column', gap: '0.75rem', flexShrink: 0 }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.75rem', 
+          padding: '0.6rem 0.75rem', 
+          borderRadius: '10px', 
+          background: 'rgba(255, 255, 255, 0.04)',
+          border: '1px solid rgba(255, 255, 255, 0.06)'
+        }}>
+          <div style={{ 
+            width: '34px', 
+            height: '34px', 
+            borderRadius: '9px', 
+            background: 'linear-gradient(135deg, #3B82F6 0%, #6366F1 100%)', 
+            color: '#FFFFFF', 
+            fontWeight: '800', 
+            fontSize: '0.85rem',
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            boxShadow: '0 2px 6px rgba(59, 130, 246, 0.3)'
+          }}>
+            {userName.charAt(0).toUpperCase()}
+          </div>
+          <div style={{ overflow: 'hidden', flex: 1 }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: '700', color: '#F1F5F9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {userName}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: '500' }}>
+              {role}
+            </div>
+          </div>
+        </div>
         <LogoutButton onClick={handleLogout} />
       </div>
     </aside>

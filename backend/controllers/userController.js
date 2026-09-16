@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Department = require('../models/Department');
 
 // @desc    Create a new user (HR/Admin only)
 // @route   POST /api/users
@@ -48,7 +49,10 @@ const createUser = async (req, res, next) => {
 // @access  Private/HR/Admin/Manager
 const getUsers = async (req, res, next) => {
   try {
-    const users = await User.find({}).select('-password').populate('department', 'name');
+    const users = await User.find({})
+      .select('-password')
+      .populate('department', 'name')
+      .populate('teamLeader', 'name employeeId role');
     res.json(users);
   } catch (error) {
     next(error);

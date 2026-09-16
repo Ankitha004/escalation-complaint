@@ -15,15 +15,22 @@ import {
   ArrowRight, 
   ArrowLeft,
   CheckCircle2, 
-  AlertCircle,
+  AlertCircle, 
   FileText,
-  UploadCloud,
-  Paperclip,
-  Trash2,
-  Check,
-  ShieldAlert,
-  Eye,
-  X
+  UploadCloud, 
+  Paperclip, 
+  Trash2, 
+  Check, 
+  ShieldAlert, 
+  Eye, 
+  X,
+  Zap,
+  Clock,
+  HelpCircle,
+  ShieldCheck,
+  Sparkles,
+  Layers,
+  ChevronRight
 } from 'lucide-react';
 
 const RaiseComplaint = () => {
@@ -54,14 +61,22 @@ const RaiseComplaint = () => {
     const fetchCategories = async () => {
       try {
         const { data } = await API.get('/categories');
-        const formattedCats = data.map(c => ({
-          id: c.name,
-          label: c.name,
-          icon: c.name.includes('IT') ? Laptop :
-                c.name.includes('Finance') ? DollarSign :
-                c.name.includes('Operations') ? Building2 :
-                c.name.includes('HR') ? Users : MoreHorizontal
-        }));
+        const formattedCats = data.map(c => {
+          let IconComp = ClipboardList;
+          const n = (c.name || '').toLowerCase();
+          if (n.includes('it') || n.includes('hardware') || n.includes('network')) IconComp = Laptop;
+          else if (n.includes('software') || n.includes('code') || n.includes('app')) IconComp = Code;
+          else if (n.includes('finance') || n.includes('payroll') || n.includes('salary')) IconComp = DollarSign;
+          else if (n.includes('facilit') || n.includes('operat') || n.includes('building')) IconComp = Building2;
+          else if (n.includes('hr') || n.includes('admin') || n.includes('user')) IconComp = Users;
+          else if (n.includes('other')) IconComp = ClipboardList;
+
+          return {
+            id: c.name,
+            label: c.name,
+            icon: IconComp
+          };
+        });
         setCategoriesList(formattedCats);
         if (!draft?.category && formattedCats.length > 0) {
           setCategory(formattedCats[0].id);
@@ -230,7 +245,7 @@ const RaiseComplaint = () => {
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F8FAFC', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <StaffSidebar activeTab="raise-complaint" unreadCount={3} />
 
-      <main style={{ flex: 1, padding: '2rem 2.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+      <main style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.75rem', maxWidth: '1600px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
         
         {/* PAGE HEADER */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
@@ -367,22 +382,27 @@ const RaiseComplaint = () => {
           </div>
         )}
 
-        {/* TWO-COLUMN LAYOUT: FORM (LEFT) + LIVE PREVIEW (RIGHT) */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.75rem', alignItems: 'start' }}>
+        {/* TWO-COLUMN LAYOUT: EXPANDED FORM (LEFT) + RICH TICKET CONSOLE (RIGHT) */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 0.95fr', gap: '1.75rem', alignItems: 'start' }}>
           
           {/* LEFT FORM STEP CONTAINER */}
-          <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '1.75rem', border: '1px solid #E2E8F0', boxShadow: '0 4px 14px rgba(15,23,42,0.03)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '2rem', border: '1px solid #E2E8F0', boxShadow: '0 8px 30px rgba(15,23,42,0.04)', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
             
             {/* STEP 1: COMPLAINT DETAILS */}
             {currentStep === 1 && (
               <>
                 {/* CATEGORY SELECTOR */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', color: '#0F172A', marginBottom: '0.75rem' }}>
-                    Category *
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                    <label style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <Layers size={17} color="#2563EB" /> Select Issue Category *
+                    </label>
+                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>
+                      Route to specialized resolution team
+                    </span>
+                  </div>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                     {categoriesList.map((cat) => {
                       const CatIcon = cat.icon;
                       const isSelected = category === cat.id;
@@ -391,34 +411,37 @@ const RaiseComplaint = () => {
                           key={cat.id}
                           onClick={() => setCategory(cat.id)}
                           style={{
-                            padding: '1rem',
-                            borderRadius: '14px',
-                            border: '1px solid',
-                            borderColor: isSelected ? '#3B82F6' : '#E2E8F0',
-                            background: isSelected ? '#EFF6FF' : '#FFFFFF',
+                            padding: '1.15rem 1rem',
+                            borderRadius: '16px',
+                            border: '1.5px solid',
+                            borderColor: isSelected ? '#2563EB' : '#E2E8F0',
+                            background: isSelected ? 'linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 100%)' : '#FFFFFF',
                             cursor: 'pointer',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '0.5rem',
-                            transition: 'all 0.2s ease',
-                            boxShadow: isSelected ? '0 0 0 1px #3B82F6, 0 4px 12px rgba(59,130,246,0.15)' : '0 2px 4px rgba(15,23,42,0.02)'
+                            gap: '0.6rem',
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            boxShadow: isSelected ? '0 10px 20px -5px rgba(37,99,235,0.22), 0 0 0 1px #2563EB' : '0 2px 6px rgba(15,23,42,0.02)',
+                            transform: isSelected ? 'translateY(-2px)' : 'none'
                           }}
                         >
                           <div style={{ 
-                            width: '38px', 
-                            height: '38px', 
-                            borderRadius: '10px', 
-                            background: isSelected ? '#3B82F6' : '#F1F5F9', 
+                            width: '44px', 
+                            height: '44px', 
+                            borderRadius: '12px', 
+                            background: isSelected ? '#2563EB' : '#F1F5F9', 
                             color: isSelected ? '#FFFFFF' : '#64748B', 
                             display: 'flex', 
                             alignItems: 'center', 
-                            justifyContent: 'center' 
+                            justifyContent: 'center',
+                            boxShadow: isSelected ? '0 4px 10px rgba(37,99,235,0.3)' : 'none',
+                            transition: 'all 0.2s ease'
                           }}>
-                            <CatIcon size={20} />
+                            <CatIcon size={22} />
                           </div>
-                          <span style={{ fontSize: '0.82rem', fontWeight: isSelected ? '700' : '600', color: isSelected ? '#1E40AF' : '#475569' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: isSelected ? '800' : '600', color: isSelected ? '#1E3A8A' : '#334155', textAlign: 'center' }}>
                             {cat.label}
                           </span>
                         </div>
@@ -428,43 +451,48 @@ const RaiseComplaint = () => {
                 </div>
 
                 {/* TICKET DEFLECTION (SMART SUGGESTIONS) */}
-                <div style={{ background: '#F8FAFC', borderLeft: '4px solid #3B82F6', padding: '1rem', borderRadius: '0 8px 8px 0', fontSize: '0.85rem', color: '#334155' }}>
-                  <div style={{ fontWeight: '700', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem' }}>
-                    <ShieldAlert size={16} color="#3B82F6" />
-                    Before you submit...
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderLeft: '4px solid #2563EB', padding: '1.1rem 1.25rem', borderRadius: '14px', fontSize: '0.85rem', color: '#334155' }}>
+                  <div style={{ fontWeight: '800', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.88rem' }}>
+                    <ShieldAlert size={17} color="#2563EB" />
+                    Quick Troubleshooting Before You Submit:
                   </div>
                   {category === 'IT & Software' && (
-                    <ul style={{ margin: 0, paddingLeft: '1.2rem', lineHeight: '1.5' }}>
-                      <li>Have you tried restarting your system?</li>
-                      <li>Check if your VPN is connected if accessing internal tools.</li>
-                      <li>Reset your password via the self-service portal.</li>
+                    <ul style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: '1.6', fontSize: '0.82rem', color: '#475569' }}>
+                      <li>Ensure your office VPN is active if accessing proprietary internal systems.</li>
+                      <li>Try clearing browser cache or restarting background processes.</li>
+                      <li>For account unlock and reset, visit the Automated Credential Portal.</li>
                     </ul>
                   )}
                   {category === 'Finance & Accounting' && (
-                    <ul style={{ margin: 0, paddingLeft: '1.2rem', lineHeight: '1.5' }}>
-                      <li>Payslips are generated by the 3rd of every month.</li>
-                      <li>Tax declarations can be updated on the HR portal.</li>
+                    <ul style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: '1.6', fontSize: '0.82rem', color: '#475569' }}>
+                      <li>Monthly payroll & tax slips are released on the 1st of every month.</li>
+                      <li>Travel & expenditure claims require scanned original tax invoices.</li>
                     </ul>
                   )}
                   {category === 'Operations & Facilities' && (
-                    <ul style={{ margin: 0, paddingLeft: '1.2rem', lineHeight: '1.5' }}>
-                      <li>For immediate safety hazards, please call extension 911.</li>
-                      <li>Meeting room bookings can be managed on the intranet.</li>
+                    <ul style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: '1.6', fontSize: '0.82rem', color: '#475569' }}>
+                      <li>For immediate infrastructure or electrical safety concerns, dial ext. 100.</li>
+                      <li>Conference room projector and HDMI cables can be collected at front desk.</li>
                     </ul>
                   )}
-                  {['HR & Admin', 'Other'].includes(category) && (
-                    <ul style={{ margin: 0, paddingLeft: '1.2rem', lineHeight: '1.5' }}>
-                      <li>Please provide as much detail as possible to speed up resolution.</li>
-                      <li>Check the company wiki for policy documents.</li>
+                  {(!['IT & Software', 'Finance & Accounting', 'Operations & Facilities'].includes(category)) && (
+                    <ul style={{ margin: 0, paddingLeft: '1.25rem', lineHeight: '1.6', fontSize: '0.82rem', color: '#475569' }}>
+                      <li>Please specify exact error codes, URLs, or equipment serial numbers.</li>
+                      <li>Attaching a screenshot in Step 2 expedites resolution by up to 50%.</li>
                     </ul>
                   )}
                 </div>
 
                 {/* PRIORITY LEVEL SELECTOR */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', color: '#0F172A', marginBottom: '0.75rem' }}>
-                    Priority Level *
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <label style={{ fontSize: '0.92rem', fontWeight: '800', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                      <Zap size={17} color="#EA580C" /> Priority Level *
+                    </label>
+                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>
+                      Dictates automated SLA escalation timers
+                    </span>
+                  </div>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.85rem' }}>
                     {prioritiesList.map((p) => {
@@ -475,19 +503,27 @@ const RaiseComplaint = () => {
                           type="button"
                           onClick={() => setPriority(p.id)}
                           style={{
-                            padding: '0.65rem',
-                            borderRadius: '10px',
-                            border: `1px solid ${isSelected ? p.color : '#E2E8F0'}`,
+                            padding: '0.85rem 0.6rem',
+                            borderRadius: '12px',
+                            border: `1.5px solid ${isSelected ? p.color : '#E2E8F0'}`,
                             background: isSelected ? p.bg : '#FFFFFF',
                             color: isSelected ? p.color : '#64748B',
-                            fontWeight: '700',
-                            fontSize: '0.82rem',
+                            fontWeight: '800',
+                            fontSize: '0.86rem',
                             cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '0.25rem',
                             transition: 'all 0.2s ease',
-                            boxShadow: isSelected ? `0 2px 8px ${p.border}` : 'none'
+                            boxShadow: isSelected ? `0 4px 12px ${p.border}` : '0 1px 3px rgba(0,0,0,0.02)',
+                            transform: isSelected ? 'scale(1.02)' : 'none'
                           }}
                         >
-                          {p.label}
+                          <span>{p.label}</span>
+                          <span style={{ fontSize: '0.68rem', fontWeight: '600', opacity: 0.85 }}>
+                            {p.id === 'Critical' ? '4h SLA' : p.id === 'High' ? '24h SLA' : p.id === 'Medium' ? '48h SLA' : '72h SLA'}
+                          </span>
                         </button>
                       );
                     })}
@@ -496,54 +532,66 @@ const RaiseComplaint = () => {
 
                 {/* COMPLAINT SUBJECT / TITLE */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', color: '#0F172A', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '800', color: '#0F172A', marginBottom: '0.5rem' }}>
                     Complaint Subject / Title *
                   </label>
                   <input
                     type="text"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
-                    placeholder="e.g. Unable to Access Company ERP System"
+                    placeholder="e.g., Unable to Access Company ERP System or Production Database"
                     style={{
                       width: '100%',
-                      padding: '0.8rem 1rem',
-                      borderRadius: '10px',
+                      padding: '0.85rem 1.15rem',
+                      borderRadius: '12px',
                       border: '1px solid #CBD5E1',
-                      fontSize: '0.9rem',
+                      fontSize: '0.92rem',
                       color: '#0F172A',
                       outline: 'none',
-                      boxSizing: 'border-box'
+                      background: '#F8FAFC',
+                      fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontWeight: '500',
+                      boxSizing: 'border-box',
+                      transition: 'all 0.2s ease'
                     }}
+                    onFocus={(e) => e.target.style.borderColor = '#2563EB'}
+                    onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
                   />
                 </div>
 
                 {/* DETAILED DESCRIPTION */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: '700', color: '#0F172A', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '800', color: '#0F172A', marginBottom: '0.5rem' }}>
                     Detailed Description *
                   </label>
                   <textarea
-                    rows={5}
+                    rows={6}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Provide exact details, error messages, or steps to reproduce..."
+                    placeholder="Provide exact details, error codes, steps to reproduce, or impacted users to accelerate resolution..."
                     style={{
                       width: '100%',
-                      padding: '0.8rem 1rem',
-                      borderRadius: '10px',
+                      padding: '0.85rem 1.15rem',
+                      borderRadius: '12px',
                       border: '1px solid #CBD5E1',
-                      fontSize: '0.88rem',
+                      fontSize: '0.9rem',
                       color: '#0F172A',
                       outline: 'none',
+                      background: '#F8FAFC',
                       fontFamily: "'Plus Jakarta Sans', sans-serif",
+                      fontWeight: '500',
+                      lineHeight: '1.55',
                       resize: 'vertical',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      transition: 'all 0.2s ease'
                     }}
+                    onFocus={(e) => e.target.style.borderColor = '#2563EB'}
+                    onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
                   />
                 </div>
 
                 {/* STEP 1 ACTION BUTTON */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid #F1F5F9' }}>
                   <button
                     type="button"
                     onClick={() => setShowCancelModal(true)}
@@ -572,15 +620,15 @@ const RaiseComplaint = () => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem',
-                      padding: '0.75rem 1.75rem',
+                      padding: '0.85rem 1.85rem',
                       borderRadius: '12px',
                       border: 'none',
-                      background: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)',
+                      background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
                       color: '#FFFFFF',
-                      fontWeight: '700',
-                      fontSize: '0.9rem',
+                      fontWeight: '800',
+                      fontSize: '0.92rem',
                       cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(37,99,235,0.35)',
+                      boxShadow: '0 6px 18px rgba(37,99,235,0.3)',
                       transition: 'all 0.2s ease'
                     }}
                   >
@@ -595,35 +643,35 @@ const RaiseComplaint = () => {
             {currentStep === 2 && (
               <>
                 <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: "'Outfit', sans-serif" }}>
-                    Attach Supporting Files
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0F172A', margin: '0 0 0.35rem 0', fontFamily: "'Outfit', sans-serif" }}>
+                    Attach Evidence & Diagnostic Files
                   </h3>
                   <p style={{ color: '#64748B', fontSize: '0.85rem', margin: 0 }}>
-                    Upload screenshots, error logs, or relevant documents to help us resolve your issue faster.
+                    Providing error logs, screenshots, or receipts speeds up investigation.
                   </p>
                 </div>
 
-                {/* DRAG & DROP ZONE */}
+                {/* DRAG AND DROP BOX */}
                 <div
                   onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                   onDragLeave={() => setDragActive(false)}
                   onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFileUpload(e); }}
                   style={{
                     border: dragActive ? '2px dashed #2563EB' : '2px dashed #CBD5E1',
-                    borderRadius: '16px',
-                    padding: '2.5rem 1.5rem',
+                    borderRadius: '18px',
+                    padding: '3rem 2rem',
                     textAlign: 'center',
                     background: dragActive ? '#EFF6FF' : '#F8FAFC',
                     transition: 'all 0.2s ease',
                     position: 'relative'
                   }}
                 >
-                  <UploadCloud size={44} style={{ color: '#2563EB', marginBottom: '0.85rem' }} />
-                  <div style={{ fontWeight: '700', fontSize: '0.95rem', color: '#0F172A' }}>
-                    Drag & Drop files here, or <label htmlFor="file-input" style={{ color: '#2563EB', cursor: 'pointer', textDecoration: 'underline' }}>browse</label>
+                  <UploadCloud size={48} style={{ color: '#2563EB', marginBottom: '0.85rem' }} />
+                  <div style={{ fontWeight: '800', fontSize: '1rem', color: '#0F172A' }}>
+                    Drag & Drop evidence files here, or <label htmlFor="file-input" style={{ color: '#2563EB', cursor: 'pointer', textDecoration: 'underline' }}>browse</label>
                   </div>
-                  <div style={{ color: '#94A3B8', fontSize: '0.78rem', marginTop: '0.4rem' }}>
-                    Supports PNG, JPG, PDF, TXT (Max size 10MB per file)
+                  <div style={{ color: '#94A3B8', fontSize: '0.8rem', marginTop: '0.45rem' }}>
+                    Supports PNG, JPG, PDF, TXT, DOCX (Max size 10MB per file)
                   </div>
                   <input
                     id="file-input"
@@ -637,30 +685,30 @@ const RaiseComplaint = () => {
                 {/* ATTACHMENTS LIST */}
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0F172A' }}>
+                    <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0F172A' }}>
                       Attached Files ({attachments.length})
                     </span>
                     <button
                       type="button"
                       onClick={handleAddSampleFile}
-                      style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8', padding: '0.3rem 0.75rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}
+                      style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8', padding: '0.4rem 0.85rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '700', cursor: 'pointer' }}
                     >
                       + Add Sample Attachment
                     </button>
                   </div>
 
                   {attachments.length === 0 ? (
-                    <div style={{ color: '#64748B', fontSize: '0.82rem', italic: 'true', padding: '1rem', background: '#F8FAFC', borderRadius: '10px', textAlign: 'center', border: '1px solid #F1F5F9' }}>
-                      No files attached yet. (Optional)
+                    <div style={{ color: '#64748B', fontSize: '0.85rem', padding: '1.5rem', background: '#F8FAFC', borderRadius: '12px', textAlign: 'center', border: '1px dashed #CBD5E1' }}>
+                      No files attached yet. Attachments are optional but highly recommended.
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                       {attachments.map((att, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.15rem', background: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <Paperclip size={18} style={{ color: '#2563EB' }} />
                             <div>
-                              <div style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0F172A' }}>{att.name}</div>
+                              <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0F172A' }}>{att.name}</div>
                               <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{att.size}</div>
                             </div>
                           </div>
@@ -669,7 +717,7 @@ const RaiseComplaint = () => {
                               <button
                                 type="button"
                                 onClick={() => setPreviewFile(att)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8', padding: '0.35rem 0.75rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: '600' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8', padding: '0.4rem 0.8rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '700' }}
                               >
                                 <Eye size={15} /> View
                               </button>
@@ -677,7 +725,7 @@ const RaiseComplaint = () => {
                             <button
                               type="button"
                               onClick={() => handleRemoveAttachment(idx)}
-                              style={{ background: '#FEE2E2', border: 'none', color: '#DC2626', padding: '0.35rem', borderRadius: '8px', cursor: 'pointer' }}
+                              style={{ background: '#FEE2E2', border: 'none', color: '#DC2626', padding: '0.4rem', borderRadius: '8px', cursor: 'pointer' }}
                             >
                               <Trash2 size={15} />
                             </button>
@@ -689,7 +737,7 @@ const RaiseComplaint = () => {
                 </div>
 
                 {/* STEP 2 ACTION BUTTONS */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid #F1F5F9' }}>
                   <button
                     type="button"
                     onClick={() => setShowCancelModal(true)}
@@ -719,7 +767,7 @@ const RaiseComplaint = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
-                        padding: '0.7rem 1.4rem',
+                        padding: '0.75rem 1.4rem',
                         borderRadius: '12px',
                         border: '1px solid #CBD5E1',
                         background: '#FFFFFF',
@@ -740,15 +788,15 @@ const RaiseComplaint = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
-                        padding: '0.75rem 1.75rem',
+                        padding: '0.85rem 1.85rem',
                         borderRadius: '12px',
                         border: 'none',
-                        background: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)',
+                        background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
                         color: '#FFFFFF',
-                        fontWeight: '700',
-                        fontSize: '0.9rem',
+                        fontWeight: '800',
+                        fontSize: '0.92rem',
                         cursor: 'pointer',
-                        boxShadow: '0 4px 14px rgba(37,99,235,0.35)'
+                        boxShadow: '0 6px 18px rgba(37,99,235,0.3)'
                       }}
                     >
                       <span>Next: Review & Submit</span>
@@ -763,83 +811,77 @@ const RaiseComplaint = () => {
             {currentStep === 3 && (
               <>
                 <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0F172A', margin: '0 0 0.25rem 0', fontFamily: "'Outfit', sans-serif" }}>
-                    Review Complaint Details
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#0F172A', margin: '0 0 0.35rem 0', fontFamily: "'Outfit', sans-serif" }}>
+                    Final Review & Confirmation
                   </h3>
                   <p style={{ color: '#64748B', fontSize: '0.85rem', margin: 0 }}>
-                    Please review all the information carefully before final submission.
+                    Please inspect your ticket summary below before submitting into the enterprise SLA queue.
                   </p>
                 </div>
 
-                {/* SUMMARY BREAKDOWN CARD */}
-                <div style={{ background: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderBottom: '1px solid #E2E8F0', paddingBottom: '0.85rem' }}>
+                <div style={{ background: '#F8FAFC', padding: '1.5rem', borderRadius: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>Category</span>
-                      <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>{category}</div>
+                      <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Selected Category</span>
+                      <div style={{ fontSize: '1rem', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>{category}</div>
                     </div>
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>Priority</span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Selected Priority</span>
                       <div style={{ marginTop: '2px' }}>
                         <span style={{ 
+                          display: 'inline-block',
                           padding: '3px 10px', 
-                          borderRadius: '12px', 
-                          fontSize: '0.78rem', 
-                          fontWeight: '700',
-                          background: priority === 'Critical' ? '#FEE2E2' : priority === 'High' ? '#FFEDD5' : priority === 'Medium' ? '#FEF3C7' : '#F0FDF4',
-                          color: priority === 'Critical' ? '#DC2626' : priority === 'High' ? '#EA580C' : priority === 'Medium' ? '#D97706' : '#16A34A',
-                          border: `1px solid ${priority === 'Critical' ? '#FCA5A5' : priority === 'High' ? '#FDBA74' : priority === 'Medium' ? '#FDE68A' : '#86EFAC'}`
+                          borderRadius: '12px',
+                          fontSize: '0.78rem',
+                          fontWeight: '800',
+                          background: priority === 'Critical' ? '#FEE2E2' : priority === 'High' ? '#FFEDD5' : priority === 'Medium' ? '#FEF3C7' : '#DCFCE7',
+                          color: priority === 'Critical' ? '#DC2626' : priority === 'High' ? '#EA580C' : priority === 'Medium' ? '#D97706' : '#16A34A'
                         }}>
-                          {priority}
+                          {priority} Priority
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>Subject</span>
+                  <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '0.85rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Subject / Title</span>
                     <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>{subject}</div>
                   </div>
 
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>Description</span>
-                    <div 
-                      style={{ fontSize: '0.88rem', color: '#1E293B', marginTop: '4px', lineHeight: '1.5', background: '#FFFFFF', padding: '0.85rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}
-                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(description) }}
-                    />
+                  <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '0.85rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Description</span>
+                    <div style={{ fontSize: '0.88rem', color: '#334155', marginTop: '4px', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{description}</div>
                   </div>
 
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>Attachments ({attachments.length})</span>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '4px' }}>
+                  <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '0.85rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Attachments ({attachments.length})</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '6px' }}>
                       {attachments.length > 0 ? (
                         attachments.map((att, i) => (
-                          <span key={i} style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '0.25rem 0.65rem', borderRadius: '8px', fontSize: '0.78rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                            <Paperclip size={13} style={{ color: '#2563EB' }} /> {att.name}
+                          <span key={i} style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '0.35rem 0.75rem', borderRadius: '8px', fontSize: '0.8rem', color: '#334155', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '600' }}>
+                            <Paperclip size={14} style={{ color: '#2563EB' }} /> {att.name}
                           </span>
                         ))
                       ) : (
-                        <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>None attached</span>
+                        <span style={{ fontSize: '0.82rem', color: '#94A3B8' }}>None attached</span>
                       )}
                     </div>
                   </div>
-
                 </div>
 
                 {/* CONFIRMATION CHECKBOX */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.88rem', color: '#1E293B', fontWeight: '600' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', fontSize: '0.88rem', color: '#1E293B', fontWeight: '700', background: '#F8FAFC', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
                   <input
                     type="checkbox"
                     checked={confirmTerms}
                     onChange={(e) => setConfirmTerms(e.target.checked)}
                     style={{ width: '18px', height: '18px', accentColor: '#2563EB', cursor: 'pointer' }}
                   />
-                  <span>I confirm that the information provided above is complete and accurate.</span>
+                  <span>I confirm that the details provided are accurate and authorize the support team to investigate.</span>
                 </label>
 
                 {/* STEP 3 ACTION BUTTONS */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid #F1F5F9' }}>
                   <button
                     type="button"
                     onClick={() => setShowCancelModal(true)}
@@ -876,8 +918,7 @@ const RaiseComplaint = () => {
                         color: '#475569',
                         fontWeight: '700',
                         fontSize: '0.88rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
+                        cursor: 'pointer'
                       }}
                     >
                       Edit Complaint
@@ -890,21 +931,20 @@ const RaiseComplaint = () => {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.75rem 2rem',
+                        gap: '0.6rem',
+                        padding: '0.85rem 2rem',
                         borderRadius: '12px',
                         border: 'none',
                         background: 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)',
                         color: '#FFFFFF',
                         fontWeight: '800',
-                        fontSize: '0.92rem',
+                        fontSize: '0.95rem',
                         cursor: submitting ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 4px 14px rgba(22,163,74,0.35)',
-                        transition: 'all 0.2s ease',
+                        boxShadow: '0 6px 18px rgba(22,163,74,0.3)',
                         opacity: submitting ? 0.7 : 1
                       }}
                     >
-                      <span>{submitting ? 'Submitting Ticket...' : 'Submit Ticket'}</span>
+                      <span>{submitting ? 'Submitting Ticket...' : 'Submit Ticket Now'}</span>
                       <CheckCircle2 size={18} />
                     </button>
                   </div>
@@ -914,80 +954,124 @@ const RaiseComplaint = () => {
 
           </div>
 
-          {/* RIGHT COLUMN: LIVE TICKET PREVIEW CARD */}
-          <div style={{ background: '#FFFFFF', borderRadius: '20px', padding: '1.5rem', border: '1px solid #E2E8F0', boxShadow: '0 4px 14px rgba(15,23,42,0.03)', display: 'flex', flexDirection: 'column', gap: '1.25rem', position: 'sticky', top: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
-                Ticket Preview
-              </h3>
-              <span style={{ fontSize: '0.75rem', background: '#EFF6FF', color: '#2563EB', fontWeight: '700', padding: '2px 8px', borderRadius: '8px' }}>
-                Step {currentStep} of 3
-              </span>
-            </div>
+          {/* RIGHT COLUMN: RICH TICKET PREVIEW & RESOLUTION SLA CONSOLE */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'sticky', top: '1.5rem' }}>
 
-            {/* Illustration Graphic Header */}
-            <div style={{ 
-              width: '100%', 
-              height: '130px', 
-              borderRadius: '16px', 
-              background: 'linear-gradient(135deg, #EFF6FF 0%, #F3E8FF 100%)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              border: '1px solid #DBEAFE' 
-            }}>
-              <div style={{ 
-                width: '60px', 
-                height: '60px', 
-                borderRadius: '16px', 
-                background: '#FFFFFF', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                color: '#2563EB', 
-                boxShadow: '0 8px 20px rgba(37,99,235,0.2)' 
-              }}>
-                <ClipboardList size={32} />
-              </div>
-            </div>
-
-            {/* PREVIEW DETAILS */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderBottom: '1px solid #F1F5F9', paddingBottom: '1rem' }}>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>Category</div>
-                <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0F172A', marginTop: '2px' }}>{category}</div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>Priority</div>
-                <span style={{ 
-                  display: 'inline-block',
-                  marginTop: '2px',
-                  padding: '2px 10px', 
-                  borderRadius: '12px',
-                  fontSize: '0.75rem',
-                  fontWeight: '700',
-                  background: priority === 'High' ? '#FEE2E2' : priority === 'Medium' ? '#FEF3C7' : '#E0F2FE',
-                  color: priority === 'High' ? '#DC2626' : priority === 'Medium' ? '#D97706' : '#0284C7'
-                }}>
-                  {priority}
+            {/* 1. TICKET PREVIEW CARD */}
+            <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '1.75rem', border: '1px solid #E2E8F0', boxShadow: '0 8px 30px rgba(15,23,42,0.04)', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ClipboardList size={18} />
+                  </div>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                    Live Ticket Console
+                  </h3>
+                </div>
+                <span style={{ fontSize: '0.75rem', background: '#EFF6FF', color: '#2563EB', fontWeight: '800', padding: '3px 10px', borderRadius: '20px', border: '1px solid #BFDBFE' }}>
+                  Step {currentStep} of 3
                 </span>
               </div>
+
+              {/* TICKET MOCKUP CARD */}
+              <div style={{ 
+                borderRadius: '16px', 
+                border: '1px solid #E2E8F0', 
+                background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)', 
+                padding: '1.25rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+                boxShadow: '0 2px 8px rgba(15,23,42,0.03)'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Subject Preview</div>
+                  <div style={{ fontSize: '0.98rem', fontWeight: '800', color: subject ? '#0F172A' : '#94A3B8', marginTop: '3px', lineHeight: '1.4' }}>
+                    {subject || 'Enter a subject title on the left...'}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid #F1F5F9' }}>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Category</div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#1E40AF', marginTop: '2px' }}>{category || 'Not selected'}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Target Priority</div>
+                    <div style={{ marginTop: '2px' }}>
+                      <span style={{ 
+                        display: 'inline-block',
+                        padding: '2px 8px', 
+                        borderRadius: '8px',
+                        fontSize: '0.74rem',
+                        fontWeight: '800',
+                        background: priority === 'Critical' ? '#FEE2E2' : priority === 'High' ? '#FFEDD5' : priority === 'Medium' ? '#FEF3C7' : '#DCFCE7',
+                        color: priority === 'Critical' ? '#DC2626' : priority === 'High' ? '#EA580C' : priority === 'Medium' ? '#D97706' : '#16A34A'
+                      }}>
+                        {priority}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ paddingTop: '0.75rem', borderTop: '1px solid #F1F5F9' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Description Summary</div>
+                  <div style={{ fontSize: '0.8rem', color: description ? '#475569' : '#94A3B8', marginTop: '3px', maxHeight: '70px', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '1.45' }}>
+                    {description ? description.slice(0, 140) + (description.length > 140 ? '...' : '') : 'Your detailed description will preview here...'}
+                  </div>
+                </div>
+
+                <div style={{ paddingTop: '0.75rem', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: '600' }}>Attachments:</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: '700', color: attachments.length > 0 ? '#2563EB' : '#94A3B8' }}>
+                    {attachments.length} file(s) attached
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div style={{ marginTop: '1rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: '600' }}>Attachments</div>
-              <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {attachments.length > 0 ? (
-                  attachments.map((file, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.25rem 0.5rem', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '0.75rem', color: '#475569' }}>
-                      <FileText size={12} />
-                      <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
-                    </div>
-                  ))
-                ) : (
-                  <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>None attached</span>
-                )}
+            {/* 2. SLA GUARANTEE & RESOLUTION LIFECYCLE WIDGET */}
+            <div style={{ background: '#FFFFFF', borderRadius: '24px', padding: '1.75rem', border: '1px solid #E2E8F0', boxShadow: '0 8px 30px rgba(15,23,42,0.04)', display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Clock size={18} color="#16A34A" />
+                <h4 style={{ margin: 0, fontSize: '0.98rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif" }}>
+                  Resolution SLA & Escalation Ladder
+                </h4>
+              </div>
+
+              {/* Target Response Timer */}
+              <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', padding: '0.9rem 1rem', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#166534', fontWeight: '700', textTransform: 'uppercase' }}>Guaranteed Resolution Window</div>
+                  <div style={{ fontSize: '1.15rem', fontWeight: '800', color: '#15803D', fontFamily: "'Outfit', sans-serif", marginTop: '2px' }}>
+                    {priority === 'Critical' ? 'Within 4 Business Hours' : priority === 'High' ? 'Within 24 Business Hours' : priority === 'Medium' ? 'Within 48 Business Hours' : 'Within 72 Business Hours'}
+                  </div>
+                </div>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#DCFCE7', color: '#16A34A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ShieldCheck size={20} />
+                </div>
+              </div>
+
+              {/* Escalation Stage Progression */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8rem', color: '#334155' }}>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>1</div>
+                  <span><strong>Level 1:</strong> Assigned to Department Team Leader immediately.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8rem', color: '#334155' }}>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>2</div>
+                  <span><strong>Level 2:</strong> Auto-escalated to Department Manager if SLA breached.</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.8rem', color: '#334155' }}>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#FDF2F8', color: '#9D174D', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: '800', flexShrink: 0 }}>3</div>
+                  <span><strong>Level 3:</strong> Final executive escalation to Super Admin & HR.</span>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px dashed #E2E8F0', paddingTop: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.74rem', color: '#64748B' }}>
+                <span>Real-time email & portal alerts</span>
+                <span style={{ color: '#2563EB', fontWeight: '700' }}>Live Tracking Enabled</span>
               </div>
             </div>
 

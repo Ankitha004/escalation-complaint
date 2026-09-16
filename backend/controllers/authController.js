@@ -66,7 +66,7 @@ const login = async (req, res, next) => {
 // @access  Public
 const register = async (req, res, next) => {
   try {
-    const { name, email, phone, department, employeeId, password, role } = req.body;
+    const { name, email, phone, department, employeeId, password, role, jobTitle, designation } = req.body;
 
     // Check if user with email or employeeId already exists
     const cleanEmail = (email || '').toLowerCase().trim();
@@ -110,6 +110,7 @@ const register = async (req, res, next) => {
       email: cleanEmail,
       phone: phone || '',
       department: departmentId,
+      designation: jobTitle || designation || '',
       employeeId: generatedEmpId,
       password,
       role: !role ? 'Staff' : role,

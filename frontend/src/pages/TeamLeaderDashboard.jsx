@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import TLSidebar from '../components/TLSidebar';
 import API from '../services/api';
@@ -23,26 +23,35 @@ import {
   Bell,
   Clock3,
   CalendarX2,
-  ListTodo
+  ListTodo,
+  TrendingUp
 } from 'lucide-react';
 
 const TeamLeaderDashboard = ({ initialTab = 'overview' }) => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // Normalize activeTab
-  const tabFromQuery = searchParams.get('tab');
-  const rawTab = tabFromQuery || initialTab || 'overview';
-  const normalizedInitialTab = (rawTab === 'dashboard' || !['complaints', 'assigned', 'my_staff', 'sla', 'leaves'].includes(rawTab)) ? 'overview' : rawTab;
+  // Helper to determine active tab based on route and search params
+  const resolveActiveTab = () => {
+    const path = location.pathname.toLowerCase();
+    if (path.includes('escalated')) return 'sla';
+    if (path.includes('assigned')) return 'assigned';
+    if (path.includes('complaints') && !path.includes('detail')) return 'complaints';
+    if (path.includes('members') || path.includes('staff')) return 'my_staff';
+    if (path.includes('leaves')) return 'leaves';
+
+    const tabFromQuery = searchParams.get('tab');
+    const rawTab = tabFromQuery || initialTab || 'overview';
+    return (rawTab === 'dashboard' || !['complaints', 'assigned', 'my_staff', 'sla', 'leaves'].includes(rawTab)) ? 'overview' : rawTab;
+  };
   
-  const [activeTab, setActiveTab] = useState(normalizedInitialTab);
+  const [activeTab, setActiveTab] = useState(resolveActiveTab);
 
   useEffect(() => {
-    const currentRaw = searchParams.get('tab') || initialTab || 'overview';
-    const norm = (currentRaw === 'dashboard' || !['complaints', 'assigned', 'my_staff', 'sla', 'leaves'].includes(currentRaw)) ? 'overview' : currentRaw;
-    setActiveTab(norm);
-  }, [searchParams, initialTab]);
+    setActiveTab(resolveActiveTab());
+  }, [location.pathname, searchParams, initialTab]);
 
   const [loading, setLoading] = useState(true);
   const [loadingStaff, setLoadingStaff] = useState(false);
@@ -81,15 +90,15 @@ const TeamLeaderDashboard = ({ initialTab = 'overview' }) => {
 
       if (Array.isArray(list)) {
         setComplaints(list);
-        setStats({
+        setStats(data.stats || {
           totalAssigned: list.length,
-          pending: list.filter(c => ['Submitted', 'Pending', 'Waiting on User'].includes(c.status)).length,
-          inProgress: list.filter(c => c.status === 'In Progress').length,
-          resolved: list.filter(c => ['Resolved', 'Closed'].includes(c.status)).length,
-          criticalCount: list.filter(c => c.priority === 'Critical' || c.priority === 'High').length,
-          escalatedCount: list.filter(c => c.status === 'Escalated' || c.escalated === true).length,
+          pending: list.filter(c => ['Submitted', 'Pending'].includes(c.status)).length,
+          inProgress: list.filter(c => ['In Progress', 'Waiting on User', 'Pending HR Review'].includes(c.status)).length,
+          resolved: list.filter(c => ['Resolved', 'Closed', 'Approved'].includes(c.status)).length,
+          criticalCount: list.filter(c => c.priority === 'Critical').length,
+          escalatedCount: list.filter(c => c.status === 'Escalated' || c.status === 'Escalated to Super Admin' || c.escalated === true).length,
           slaBreachWarningCount: list.filter(c => c.slaStatus === 'Breached' || c.slaStatus === 'Warning').length,
-          slaAdherenceRate: null // Currently no API for SLA percentage
+          slaAdherenceRate: list.length > 0 ? Math.round(((list.length - list.filter(c => c.slaStatus === 'Breached').length) / list.length) * 100) : 100
         });
         setErrorMsg('');
       }
@@ -168,7 +177,7 @@ const TeamLeaderDashboard = ({ initialTab = 'overview' }) => {
   if (activeTab === 'assigned') {
     filteredComplaints = safeComplaints.filter(c => !['Resolved', 'Closed'].includes(c.status));
   } else if (activeTab === 'sla') {
-    filteredComplaints = safeComplaints.filter(c => c.status === 'Escalated' || c.escalated === true || c.slaStatus === 'Breached');
+    filteredComplaints = safeComplaints.filter(c => c.status === 'Escalated' || c.status === 'Escalated to Super Admin' || c.escalated === true || c.escalatedToSuperAdmin === true);
   }
   
   filteredComplaints = filteredComplaints.filter((c) => {
@@ -210,7 +219,7 @@ const TeamLeaderDashboard = ({ initialTab = 'overview' }) => {
               <ShieldCheck size={14} /> Team Leader Operations Desk
             </div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0F172A', fontFamily: "'Outfit', sans-serif", margin: '0 0 0.25rem 0' }}>
-              {isOverview ? 'Dashboard Overview' : activeTab === 'assigned' ? 'Assigned Complaints' : activeTab === 'complaints' ? 'All Team Complaints' : activeTab === 'my_staff' ? 'Team Members' : activeTab === 'leaves' ? 'Leave Requests' : 'SLA & Escalation Analytics'}
+              {isOverview ? 'Dashboard Overview' : activeTab === 'assigned' ? 'Assigned Complaints' : activeTab === 'complaints' ? 'All Team Complaints' : activeTab === 'sla' ? 'Escalated Complaints' : activeTab === 'my_staff' ? 'Team Members' : activeTab === 'leaves' ? 'Leave Requests' : 'SLA & Escalation Analytics'}
             </h1>
             <p style={{ color: '#64748B', fontSize: '0.9rem', margin: 0 }}>
               Supervisor overview for <strong style={{ color: '#0F172A' }}>{user?.name || 'Supervisor'}</strong> | Direct Team Operations
@@ -312,7 +321,9 @@ const TeamLeaderDashboard = ({ initialTab = 'overview' }) => {
               <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <ListTodo size={20} color="#0F172A" />
-                  <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>My Team Complaints</h2>
+                  <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0F172A', margin: 0, fontFamily: "'Outfit', sans-serif" }}>
+                    {activeTab === 'sla' ? 'Escalated Complaints' : activeTab === 'assigned' ? 'Assigned Complaints' : 'My Team Complaints'}
+                  </h2>
                   <span style={{ background: '#EFF6FF', color: '#2563EB', padding: '2px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: '800' }}>{filteredComplaints.length} Records</span>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>

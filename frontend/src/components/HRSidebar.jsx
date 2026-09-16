@@ -53,8 +53,11 @@ const HRSidebar = ({ activeTab = 'dashboard', badgeCount = 0 }) => {
       display: 'flex', 
       flexDirection: 'column', 
       flexShrink: 0, 
-      minHeight: '100vh',
-      fontFamily: "'Plus Jakarta Sans', sans-serif"
+      height: '100vh',
+      position: 'sticky',
+      top: 0,
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      boxSizing: 'border-box'
     }}>
       
       {/* BRAND HEADER */}
@@ -160,7 +163,7 @@ const HRSidebar = ({ activeTab = 'dashboard', badgeCount = 0 }) => {
       </div>
 
       {/* LOGOUT FOOTER */}
-      <div style={{ padding: '1.5rem', borderTop: '1px solid #1F2937' }}>
+      <div style={{ padding: '1.15rem 1.5rem', borderTop: '1px solid #1F2937', flexShrink: 0 }}>
         <button 
           onClick={handleLogout} 
           style={{ 

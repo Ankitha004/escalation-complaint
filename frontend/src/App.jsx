@@ -93,10 +93,15 @@ const App = () => {
           <Route path="/incentives-salary" element={<ProtectedRoute allowedRoles={['HR', 'Super Admin']}><HRSalaries /></ProtectedRoute>} />
           <Route path="/hr-complaints" element={<ProtectedRoute allowedRoles={['HR', 'Super Admin']}><HRComplaints /></ProtectedRoute>} />
           <Route path="/hr-complaint-details/:id" element={<ProtectedRoute allowedRoles={['HR', 'Super Admin']}><HRComplaintDetails /></ProtectedRoute>} />
+          <Route path="/hr complaint details/:id" element={<ProtectedRoute allowedRoles={['HR', 'Super Admin']}><HRComplaintDetails /></ProtectedRoute>} />
+          <Route path="/hr_complaint_details/:id" element={<ProtectedRoute allowedRoles={['HR', 'Super Admin']}><HRComplaintDetails /></ProtectedRoute>} />
 
           {/* Manager Module Routes (Manager Only) */}
           <Route path="/manager-dashboard" element={<ProtectedRoute allowedRoles={['Manager']}><ManagerDashboard initialTab="overview" /></ProtectedRoute>} />
           <Route path="/manager-complaints" element={<ProtectedRoute allowedRoles={['Manager']}><ManagerDashboard initialTab="complaints" /></ProtectedRoute>} />
+          <Route path="/manager-escalated" element={<ProtectedRoute allowedRoles={['Manager']}><ManagerDashboard initialTab="escalated" /></ProtectedRoute>} />
+          <Route path="/manager escalated" element={<ProtectedRoute allowedRoles={['Manager']}><ManagerDashboard initialTab="escalated" /></ProtectedRoute>} />
+          <Route path="/manager_escalated" element={<ProtectedRoute allowedRoles={['Manager']}><ManagerDashboard initialTab="escalated" /></ProtectedRoute>} />
           <Route path="/manager-complaint-details/:id" element={<ProtectedRoute allowedRoles={['Manager']}><ManagerComplaintDetails /></ProtectedRoute>} />
           <Route path="/manager-performance" element={<ProtectedRoute allowedRoles={['Manager']}><ManagerPerformance /></ProtectedRoute>} />
           <Route path="/manager-sla" element={<ProtectedRoute allowedRoles={['Manager']}><ManagerSLA /></ProtectedRoute>} />
@@ -109,6 +114,9 @@ const App = () => {
           <Route path="/tl-assigned-complaints" element={<ProtectedRoute allowedRoles={['Team Leader']}><TeamLeaderDashboard initialTab="assigned" /></ProtectedRoute>} />
           <Route path="/tl-all-complaints" element={<ProtectedRoute allowedRoles={['Team Leader']}><TeamLeaderDashboard initialTab="complaints" /></ProtectedRoute>} />
           <Route path="/tl-escalated-complaints" element={<ProtectedRoute allowedRoles={['Team Leader']}><TeamLeaderDashboard initialTab="sla" /></ProtectedRoute>} />
+          <Route path="/tl escalated complaints" element={<ProtectedRoute allowedRoles={['Team Leader']}><TeamLeaderDashboard initialTab="sla" /></ProtectedRoute>} />
+          <Route path="/tl_escalated_complaints" element={<ProtectedRoute allowedRoles={['Team Leader']}><TeamLeaderDashboard initialTab="sla" /></ProtectedRoute>} />
+          <Route path="/tl escalated-complaints" element={<ProtectedRoute allowedRoles={['Team Leader']}><TeamLeaderDashboard initialTab="sla" /></ProtectedRoute>} />
           <Route path="/tl-reports" element={<ProtectedRoute allowedRoles={['Team Leader']}><TLReportsPage /></ProtectedRoute>} />
           <Route path="/tl-team-members" element={<ProtectedRoute allowedRoles={['Team Leader']}><TeamLeaderDashboard initialTab="my_staff" /></ProtectedRoute>} />
           <Route path="/tl-performance" element={<ProtectedRoute allowedRoles={['Team Leader']}><TLPerformancePage /></ProtectedRoute>} />

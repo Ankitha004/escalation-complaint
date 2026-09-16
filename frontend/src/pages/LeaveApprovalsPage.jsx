@@ -149,19 +149,19 @@ const LeaveApprovalsPage = () => {
             {/* LEAVE QUOTA ALLOCATION CARDS */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
               <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Casual Leave Quota</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0F172A', marginTop: '4px', fontFamily: "'Outfit', sans-serif" }}>12 Days / Year</div>
-                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Standard Annual Allocation</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Earned Leave (EL) Quota</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0F172A', marginTop: '4px', fontFamily: "'Outfit', sans-serif" }}>6 Days / Year</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Annual Standard Allocation</div>
               </div>
               <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sick Leave Quota</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0F172A', marginTop: '4px', fontFamily: "'Outfit', sans-serif" }}>12 Days / Year</div>
-                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Medical & Emergency Allocation</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#059669', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Medical Leave Quota</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0F172A', marginTop: '4px', fontFamily: "'Outfit', sans-serif" }}>6 Days / Year</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Medical & Health Allocation</div>
               </div>
               <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#16A34A', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Earned Leave Quota</div>
-                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0F172A', marginTop: '4px', fontFamily: "'Outfit', sans-serif" }}>15 Days / Year</div>
-                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Privilege Paid Leave Quota</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Annual Limit</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0F172A', marginTop: '4px', fontFamily: "'Outfit', sans-serif" }}>12 Days Total</div>
+                <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>Strict Yearly Policy Cap</div>
               </div>
               <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '14px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
                 <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Leaves Pending</div>
@@ -192,7 +192,16 @@ const LeaveApprovalsPage = () => {
                           <div style={{ fontWeight: '700', color: '#0F172A' }}>{leave.employee?.name || 'Unknown'}</div>
                           <span style={{ fontSize: '0.75rem', color: '#64748B' }}>ID: {leave.employee?.employeeId}</span>
                         </td>
-                        <td style={{ padding: '1.25rem', color: '#334155', fontWeight: '600' }}>{leave.type}</td>
+                        <td style={{ padding: '1.25rem', color: '#334155', fontWeight: '600' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            <span>{leave.type}</span>
+                            {leave.salaryDeductionAmount > 0 && (
+                              <span style={{ fontSize: '0.7rem', fontWeight: '800', background: '#FEE2E2', color: '#DC2626', border: '1px solid #FECACA', padding: '2px 7px', borderRadius: '6px' }}>
+                                -₹{leave.salaryDeductionAmount.toLocaleString('en-IN')} ({leave.deductionDays}d deduct)
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td style={{ padding: '1.25rem', color: '#475569' }}>
                           {new Date(leave.startDate).toLocaleDateString()} - {new Date(leave.endDate).toLocaleDateString()}
                         </td>

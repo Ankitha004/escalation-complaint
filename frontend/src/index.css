@@ -62,7 +62,7 @@
 }
 
 html {
-  font-size: 106.25%; /* Scaled 0.25em larger for enhanced readability */
+  font-size: 100%;
 }
 
 html, body, #root, button, input, select, textarea, div, span, p, a, th, td, label {
@@ -73,7 +73,7 @@ html, body, #root, button, input, select, textarea, div, span, p, a, th, td, lab
 }
 
 body {
-  font-size: 1.025rem;
+  font-size: 0.95rem;
   background-color: var(--bg-canvas);
   color: var(--dark-text);
   min-height: 100vh;
@@ -2716,12 +2716,16 @@ h1, h2, h3, h4, h5, h6 {
   width: 280px;
   background: #FFFFFF;
   border-right: 1px solid var(--border-color);
-  padding: 1.75rem 1.25rem;
+  padding: 1.5rem 1.25rem 1.25rem 1.25rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   flex-shrink: 0;
   z-index: 40;
+  position: sticky;
+  top: 68px;
+  height: calc(100vh - 68px);
+  box-sizing: border-box;
 }
 
 .sidebar-menu-btn {

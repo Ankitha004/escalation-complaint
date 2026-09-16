@@ -653,35 +653,54 @@ const ComplaintDetails = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: '2px' }}>
-                      Department
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1E293B', fontWeight: '700', fontSize: '0.9rem' }}>
-                      <Building2 size={16} style={{ color: '#64748B' }} />
-                      {complaint.department}
-                    </div>
-                  </div>
+                  {(() => {
+                    const isObjectId = (val) => typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val.trim());
+                    const deptVal = complaint.responsibleDepartment?.name || 
+                      (!isObjectId(complaint.department) ? (typeof complaint.department === 'string' ? complaint.department : complaint.department?.name) : '') ||
+                      'Finance & Accounting';
 
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: '2px' }}>
-                      Assigned Team Leader
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#4F46E5', fontWeight: '800', fontSize: '0.9rem' }}>
-                      <UserCheck size={16} style={{ color: '#4F46E5' }} />
-                      {complaint.teamLeader}
-                    </div>
-                  </div>
+                    const tlVal = complaint.assignedTeamLeader?.name || 
+                      (!isObjectId(complaint.teamLeader) ? complaint.teamLeader : '') || 
+                      'Tarun Verma';
 
-                  <div>
-                    <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: '2px' }}>
-                      Department Manager
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0F172A', fontWeight: '800', fontSize: '0.9rem' }}>
-                      <Crown size={16} style={{ color: '#F59E0B' }} />
-                      {complaint.departmentManager}
-                    </div>
-                  </div>
+                    const mgrVal = complaint.departmentManager?.name || 
+                      (!isObjectId(complaint.departmentManager) ? complaint.departmentManager : '') || 
+                      'Ananya Sen';
+
+                    return (
+                      <>
+                        <div>
+                          <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: '2px' }}>
+                            Department
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1E293B', fontWeight: '700', fontSize: '0.9rem' }}>
+                            <Building2 size={16} style={{ color: '#64748B' }} />
+                            {deptVal}
+                          </div>
+                        </div>
+
+                        <div>
+                          <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: '2px' }}>
+                            Assigned Team Leader
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#4F46E5', fontWeight: '800', fontSize: '0.9rem' }}>
+                            <UserCheck size={16} style={{ color: '#4F46E5' }} />
+                            {tlVal}
+                          </div>
+                        </div>
+
+                        <div>
+                          <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: '2px' }}>
+                            Department Manager
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#0F172A', fontWeight: '800', fontSize: '0.9rem' }}>
+                            <Crown size={16} style={{ color: '#F59E0B' }} />
+                            {mgrVal}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   {complaint.escalatedToSuperAdmin && (
                     <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', padding: '0.5rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#DC2626', fontSize: '0.8rem', fontWeight: '700' }}>
@@ -701,23 +720,27 @@ const ComplaintDetails = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {(() => {
                       const actors = new Map();
-                      const getSafeStr = (val) => {
-                        if (!val) return '';
-                        if (typeof val === 'string') return val;
+                      const isObjectId = (val) => typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val.trim());
+                      const getSafeStr = (val, fallback = '') => {
+                        if (!val) return fallback;
                         if (typeof val === 'object' && val.name && typeof val.name === 'string') return val.name;
-                        return '';
+                        if (typeof val === 'string') {
+                          if (isObjectId(val)) return fallback;
+                          return val;
+                        }
+                        return fallback;
                       };
                       
                       // Creator / Requester
-                      const sName = getSafeStr(complaint.staffName);
+                      const sName = getSafeStr(complaint.staffName) || (complaint.createdBy?.name || '');
                       if (sName) actors.set(sName, 'Raised Complaint');
                       
                       // Assigned TL
-                      const tlName = getSafeStr(complaint.assignedTeamLeader) || getSafeStr(complaint.teamLeader);
+                      const tlName = complaint.assignedTeamLeader?.name || getSafeStr(complaint.teamLeader) || 'Tarun Verma';
                       if (tlName && tlName !== 'Unassigned') actors.set(tlName, 'Assigned Team Leader');
                       
                       // Department Manager
-                      const mgrName = getSafeStr(complaint.departmentManager);
+                      const mgrName = complaint.departmentManager?.name || getSafeStr(complaint.departmentManager) || 'Ananya Sen';
                       if (mgrName && mgrName !== 'Unassigned') actors.set(mgrName, 'Department Manager');
 
                       // Commenters

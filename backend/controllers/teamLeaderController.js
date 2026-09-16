@@ -183,11 +183,11 @@ const getTLComplaints = async (req, res, next) => {
     });
 
     const totalAssigned = complaints.length;
-    const pending = complaints.filter(c => c.status === 'Pending' || c.status === 'Submitted').length;
-    const inProgress = complaints.filter(c => c.status === 'In Progress').length;
-    const resolved = complaints.filter(c => c.status === 'Resolved' || c.status === 'Closed').length;
-    const criticalCount = complaints.filter(c => c.priority === 'Critical' || c.priority === 'High').length;
-    const escalatedCount = complaints.filter(c => c.slaStatus === 'Escalated').length;
+    const pending = complaints.filter(c => ['Pending', 'Submitted'].includes(c.status)).length;
+    const inProgress = complaints.filter(c => ['In Progress', 'Waiting on User', 'Pending HR Review'].includes(c.status)).length;
+    const resolved = complaints.filter(c => ['Resolved', 'Closed', 'Approved'].includes(c.status)).length;
+    const criticalCount = complaints.filter(c => c.priority === 'Critical').length;
+    const escalatedCount = complaints.filter(c => c.escalated || c.status === 'Escalated' || c.status === 'Escalated to Super Admin' || c.slaStatus === 'Escalated').length;
 
     // SLA warning: Warning or Breached tickets
     const slaBreachWarningCount = complaints.filter(c => c.slaStatus === 'Breached' || c.slaStatus === 'Warning').length;
@@ -354,6 +354,15 @@ const updateTLComplaintStatus = async (req, res, next) => {
     } else if (newStatus === 'Resolved') {
       timelineTitle = 'Resolved by Team Leader';
       complaint.resolvedDate = new Date();
+      complaint.resolutionReports.push({
+        solvedBy: req.user._id,
+        solverName: req.user.name,
+        solverRole: 'Team Leader',
+        reportText: note || `Issue marked resolved by Team Leader ${req.user.name}.`,
+        forwardedTo: 'HR',
+        isReviewed: false,
+        createdAt: new Date()
+      });
     } else if (newStatus === 'Closed') {
       timelineTitle = 'Closed';
       complaint.closedDate = new Date();
@@ -377,16 +386,24 @@ const updateTLComplaintStatus = async (req, res, next) => {
         updated._id
       );
     }
-    if (newStatus === 'Resolved' && updated.departmentManager) {
-      await createNotification(
-        updated.departmentManager,
-        `Complaint #${updated.complaintId} has been resolved by Team Leader ${req.user.name}.`,
-        updated._id
-      );
+    if (newStatus === 'Resolved') {
+      if (updated.departmentManager) {
+        await createNotification(
+          updated.departmentManager,
+          `Complaint #${updated.complaintId} has been resolved by Team Leader ${req.user.name}.`,
+          updated._id
+        );
+      }
       await notifyHRAndSuperAdminOnResolution(updated, req.user ? req.user.name : '');
     }
 
-    res.json(updated);
+    const populated = await Complaint.findById(updated._id)
+      .populate('responsibleDepartment', 'name')
+      .populate('assignedTeamLeader', 'name employeeId')
+      .populate('departmentManager', 'name employeeId')
+      .populate('createdBy', 'name employeeId department designation');
+
+    res.json(populated || updated);
   } catch (error) {
     next(error);
   }
@@ -521,7 +538,13 @@ const submitResolutionReport = async (req, res, next) => {
     }
     await notifyHRAndSuperAdminOnResolution(updated, req.user ? req.user.name : '');
 
-    res.json({ message: 'Resolution report submitted successfully', complaint: updated });
+    const populated = await Complaint.findById(updated._id)
+      .populate('responsibleDepartment', 'name')
+      .populate('assignedTeamLeader', 'name employeeId')
+      .populate('departmentManager', 'name employeeId')
+      .populate('createdBy', 'name employeeId department designation');
+
+    res.json({ message: 'Resolution report submitted successfully', complaint: populated || updated });
   } catch (error) {
     next(error);
   }
@@ -582,7 +605,13 @@ const manualEscalate = async (req, res, next) => {
       );
     }
 
-    res.json({ message: 'Complaint escalated to Manager', complaint: updated });
+    const populated = await Complaint.findById(updated._id)
+      .populate('responsibleDepartment', 'name')
+      .populate('assignedTeamLeader', 'name employeeId')
+      .populate('departmentManager', 'name employeeId')
+      .populate('createdBy', 'name employeeId department designation');
+
+    res.json({ message: 'Complaint escalated to Manager', complaint: populated || updated });
   } catch (error) {
     next(error);
   }

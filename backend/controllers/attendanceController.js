@@ -3,11 +3,29 @@ const User = require('../models/User');
 const { createNotification } = require('../services/notificationService');
 
 const getTodayDateFormats = (d = new Date()) => {
-  const isoDate = d.toISOString().split('T')[0];
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+
+  const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   const localDate = d.toLocaleDateString();
-  const enUsDate = d.toLocaleDateString('en-US');
-  const enInDate = d.toLocaleDateString('en-IN');
-  return Array.from(new Set([isoDate, localDate, enUsDate, enInDate]));
+  const enUsDate = d.toLocaleDateString('en-US'); // e.g. 9/15/2026 or 09/15/2026
+  const enInDate = d.toLocaleDateString('en-IN'); // e.g. 15/9/2026 or 15/09/2026
+  const slashFormat1 = `${day}/${month}/${year}`;
+  const slashFormat2 = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+  const slashFormat3 = `${month}/${day}/${year}`;
+  const slashFormat4 = `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`;
+
+  return Array.from(new Set([
+    isoDate, 
+    localDate, 
+    enUsDate, 
+    enInDate, 
+    slashFormat1, 
+    slashFormat2, 
+    slashFormat3, 
+    slashFormat4
+  ]));
 };
 
 // @desc    Clock in or clock out
@@ -16,61 +34,110 @@ const getTodayDateFormats = (d = new Date()) => {
 const recordAttendance = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const todayStr = new Date().toLocaleDateString();
-    const todayFormats = getTodayDateFormats();
+    const { action } = req.body || {}; // 'clockIn' or 'clockOut' (optional for backwards compatibility)
+    const now = new Date();
+    const timeNow = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const todayStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const todayFormats = getTodayDateFormats(now);
 
+    // Auto-close any lingering unclosed shifts from previous days
+    await Attendance.updateMany(
+      {
+        employee: userId,
+        date: { $nin: todayFormats },
+        clockOut: 'In Progress'
+      },
+      {
+        $set: { clockOut: '06:00 PM' }
+      }
+    );
+
+    // Find attendance record for today
     let attendance = await Attendance.findOne({ employee: userId, date: { $in: todayFormats } });
 
     if (attendance) {
-      if (attendance.clockOut === 'In Progress') {
-        attendance.clockOut = timeNow;
-        await attendance.save();
+      // User is already clocked in today
+      if (action === 'clockIn') {
+        return res.status(400).json({ 
+          message: `You have already clocked in today at ${attendance.clockIn}.`,
+          attendance 
+        });
+      }
 
-        // Notify Team Leader & Department Manager about Clock Out
-        const currentUser = await User.findById(userId);
-        if (currentUser.teamLeader) {
+      if (attendance.clockOut && attendance.clockOut !== 'In Progress') {
+        return res.status(400).json({ 
+          message: `You have already completed your shift today (Clocked Out at ${attendance.clockOut}).`,
+          attendance 
+        });
+      }
+
+      // If action is clockOut or no action specified (toggle)
+      // Prevent accidental rapid double-click within 5 seconds of clockIn creation
+      if (attendance.createdAt) {
+        const diffMs = Date.now() - new Date(attendance.createdAt).getTime();
+        if (diffMs < 5000 && !action) {
+          return res.status(400).json({
+            message: 'Clock-in just registered. Please wait a moment before clocking out.',
+            attendance
+          });
+        }
+      }
+
+      attendance.clockOut = timeNow;
+      await attendance.save();
+
+      // Notify Team Leader & Department Manager about Clock Out
+      const currentUser = await User.findById(userId);
+      if (currentUser?.teamLeader) {
+        await createNotification(
+          currentUser.teamLeader,
+          `${currentUser.name} (${currentUser.role}) has clocked out at ${timeNow}.`
+        );
+      }
+      if (currentUser?.department) {
+        const deptManagers = await User.find({
+          department: currentUser.department,
+          role: 'Manager',
+          _id: { $ne: userId }
+        }).select('_id');
+        for (const mgr of deptManagers) {
           await createNotification(
-            currentUser.teamLeader,
+            mgr._id,
             `${currentUser.name} (${currentUser.role}) has clocked out at ${timeNow}.`
           );
         }
-        if (currentUser.department) {
-          const deptManagers = await User.find({
-            department: currentUser.department,
-            role: 'Manager',
-            _id: { $ne: userId }
-          }).select('_id');
-          for (const mgr of deptManagers) {
-            await createNotification(
-              mgr._id,
-              `${currentUser.name} (${currentUser.role}) has clocked out at ${timeNow}.`
-            );
-          }
-        }
-
-        res.json({ message: 'Clocked Out successfully. Your attendance has been updated and notified to your superior.', attendance });
-      } else {
-        res.status(400);
-        throw new Error('Already clocked out for today');
       }
+
+      return res.json({ 
+        message: 'Clocked Out successfully. Have a great day!', 
+        attendance 
+      });
+
     } else {
+      // User is not clocked in yet today
+      if (action === 'clockOut') {
+        return res.status(400).json({ 
+          message: 'You cannot clock out before clocking in for today.' 
+        });
+      }
+
       attendance = await Attendance.create({
         employee: userId,
         clockIn: timeNow,
+        clockOut: 'In Progress',
         date: todayStr,
         status: 'Present',
       });
 
       // Notify Team Leader & Department Manager about Clock In
       const currentUser = await User.findById(userId);
-      if (currentUser.teamLeader) {
+      if (currentUser?.teamLeader) {
         await createNotification(
           currentUser.teamLeader,
           `${currentUser.name} (${currentUser.role}) has clocked in at ${timeNow} for today.`
         );
       }
-      if (currentUser.department) {
+      if (currentUser?.department) {
         const deptManagers = await User.find({
           department: currentUser.department,
           role: 'Manager',
@@ -84,7 +151,10 @@ const recordAttendance = async (req, res, next) => {
         }
       }
 
-      res.status(201).json({ message: 'Clocked In successfully. Your attendance is marked and available to your superiors.', attendance });
+      return res.status(201).json({ 
+        message: 'Clocked In successfully. Your attendance is marked for today.', 
+        attendance 
+      });
     }
   } catch (error) {
     next(error);
@@ -97,9 +167,23 @@ const recordAttendance = async (req, res, next) => {
 const getTodayAttendance = async (req, res, next) => {
   try {
     const todayFormats = getTodayDateFormats();
-    const attendance = await Attendance.findOne({ employee: req.user._id, date: { $in: todayFormats } });
+    const userId = req.user._id;
+
+    // Auto-close any lingering unclosed shifts from previous days for clean state
+    await Attendance.updateMany(
+      {
+        employee: userId,
+        date: { $nin: todayFormats },
+        clockOut: 'In Progress'
+      },
+      {
+        $set: { clockOut: '06:00 PM' }
+      }
+    );
+
+    const attendance = await Attendance.findOne({ employee: userId, date: { $in: todayFormats } });
     const totalDaysAttended = await Attendance.countDocuments({
-      employee: req.user._id,
+      employee: userId,
       status: { $in: ['Present', 'Late'] }
     });
 
